@@ -4,6 +4,8 @@ import type {
   DecrementResponse,
   IncrementResponse,
   InitResponse,
+  HealthResponse,
+  BootstrapResponse,
 } from '../../shared/api';
 
 type ErrorResponse = {
@@ -12,6 +14,21 @@ type ErrorResponse = {
 };
 
 export const api = new Hono();
+
+api.get('/health', (c) => {
+  return c.json<HealthResponse>({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+api.get('/bootstrap', async (c) => {
+  return c.json<BootstrapResponse>({
+    status: 'ok',
+    seed: 'seed-placeholder',
+    puzzles: [],
+  });
+});
 
 api.get('/init', async (c) => {
   const { postId } = context;
@@ -91,3 +108,4 @@ api.post('/decrement', async (c) => {
     type: 'decrement',
   });
 });
+
