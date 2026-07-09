@@ -1,6 +1,14 @@
 import Phaser from 'phaser';
 import { generatePuzzlesForSeed, PuzzleLayout, PuzzleShape } from '../shared/puzzle';
 import { calculatePuzzleScore } from '../shared/scoring';
+import type {
+  FailureEvent,
+  FailureReason,
+  GestureAttempt,
+  GesturePointSample,
+  RunTelemetry,
+  SolveEvent,
+} from '../shared/api';
 import {
   normalizePath,
   Point,
@@ -12,7 +20,10 @@ import {
 export interface GameCallbacks {
   onScoreChange: (score: number, combo: number) => void;
   onTimeChange: (timeMs: number) => void;
-  onFinish: (result: { score: number; puzzlesSolved: number; maxCombo: number }) => void;
+  onFinish: (
+    result: { score: number; puzzlesSolved: number; maxCombo: number },
+    telemetry: RunTelemetry
+  ) => void;
   onReady: (scene: Phaser.Scene & { startCountdown: () => void }) => void;
 }
 
@@ -49,6 +60,15 @@ type FailureEffect = {
   maxAge: number;
 };
 
+type PendingAttempt = {
+  puzzleIndex: number;
+  startedAtMs: number;
+  releaseTimestampMs: number;
+  pointCount: number;
+  pathLength: number;
+  points: GesturePointSample[];
+};
+
 class DailyLineScene extends Phaser.Scene {
   private callbacks!: GameCallbacks;
   private seed!: string;
@@ -59,6 +79,7 @@ class DailyLineScene extends Phaser.Scene {
 
   private state: SceneState = 'waiting';
   private timeRemainingMs = 30000;
+  private runStartTime = 0;
 
   private score = 0;
   private combo = 0;
@@ -69,6 +90,7 @@ class DailyLineScene extends Phaser.Scene {
 
   private rawPath: Point[] = [];
   private displayPath: Point[] = [];
+  private rawPointSamples: GesturePointSample[] = [];
 
   private snakePath: Point[] = [];
   private baseGesture: Point[] = [];
@@ -80,6 +102,11 @@ class DailyLineScene extends Phaser.Scene {
   private activeTargets: PuzzleShape[] = [];
   private popEffects: PopEffect[] = [];
   private failureEffect: FailureEffect | null = null;
+  private currentAttemptStartMs = 0;
+  private pendingAttempt: PendingAttempt | null = null;
+  private attempts: GestureAttempt[] = [];
+  private solveEvents: SolveEvent[] = [];
+  private failureEvents: FailureEvent[] = [];
 
   private graphics!: Phaser.GameObjects.Graphics;
   private activeCountdownText: Phaser.GameObjects.Text | null = null;
@@ -146,6 +173,11 @@ class DailyLineScene extends Phaser.Scene {
     this.maxCombo = 0;
     this.puzzlesSolved = 0;
     this.timeRemainingMs = 30000;
+    this.runStartTime = this.time.now;
+    this.attempts = [];
+    this.solveEvents = [];
+    this.failureEvents = [];
+    this.pendingAttempt = null;
     this.callbacks.onScoreChange(this.score, this.combo);
     this.callbacks.onTimeChange(this.timeRemainingMs);
     this.loadPuzzle(0);
@@ -169,6 +201,7 @@ class DailyLineScene extends Phaser.Scene {
   private resetAttemptState() {
     this.rawPath = [];
     this.displayPath = [];
+    this.rawPointSamples = [];
     this.snakePath = [];
     this.baseGesture = [];
     this.snakeLength = 0;
@@ -290,9 +323,17 @@ class DailyLineScene extends Phaser.Scene {
     if (this.activePointerId !== null) return;
 
     this.activePointerId = pointer.id;
+    this.currentAttemptStartMs = this.time.now - this.runStartTime;
     const point = { x: pointer.x, y: pointer.y };
     this.rawPath = [point];
     this.displayPath = [point];
+    this.rawPointSamples = [
+      {
+        x: point.x,
+        y: point.y,
+        t: this.currentAttemptStartMs,
+      },
+    ];
     this.renderScene();
   }
 
@@ -306,6 +347,11 @@ class DailyLineScene extends Phaser.Scene {
     if (Phaser.Math.Distance.Between(previous.x, previous.y, next.x, next.y) < 2) return;
 
     this.rawPath.push(next);
+    this.rawPointSamples.push({
+      x: next.x,
+      y: next.y,
+      t: this.time.now - this.runStartTime,
+    });
     this.displayPath = smoothPath(this.rawPath, 1);
     this.renderScene();
   }
@@ -324,10 +370,19 @@ class DailyLineScene extends Phaser.Scene {
     if (normalized.length < MIN_GESTURE_POINTS || gestureLength < MIN_GESTURE_LENGTH) {
       this.rawPath = [];
       this.displayPath = [];
+      this.rawPointSamples = [];
       this.renderScene();
       return;
     }
 
+    this.pendingAttempt = {
+      puzzleIndex: this.activePuzzleIndex,
+      startedAtMs: this.currentAttemptStartMs,
+      releaseTimestampMs: this.time.now - this.runStartTime,
+      pointCount: this.rawPointSamples.length,
+      pathLength: Math.round(gestureLength),
+      points: [...this.rawPointSamples],
+    };
     this.baseGesture = normalized;
     this.snakeLength = normalized.length;
     this.snakePath = [...normalized];
@@ -348,10 +403,16 @@ class DailyLineScene extends Phaser.Scene {
     });
   }
 
-  private failPuzzle(hitPoint?: Point) {
+  private failPuzzle(hitPoint?: Point, reason: FailureReason = 'hazard') {
     if (this.state === 'resolving-failure' || this.state === 'finished') return;
 
     this.state = 'resolving-failure';
+    this.finalizePendingAttempt('failure');
+    this.failureEvents.push({
+      puzzleIndex: this.activePuzzleIndex,
+      timestampMs: Math.max(0, Math.round(this.time.now - this.runStartTime)),
+      reason,
+    });
     this.combo = 0;
     this.callbacks.onScoreChange(this.score, this.combo);
     this.cameras.main.shake(180, 0.008);
@@ -379,6 +440,12 @@ class DailyLineScene extends Phaser.Scene {
     const result = calculatePuzzleScore(this.activePuzzleIndex, solveTime, this.combo);
 
     this.state = 'resolving-success';
+    this.finalizePendingAttempt('success');
+    this.solveEvents.push({
+      puzzleIndex: this.activePuzzleIndex,
+      solveTimeMs: Math.round(solveTime),
+      timestampMs: Math.max(0, Math.round(this.time.now - this.runStartTime)),
+    });
     this.score += result.totalScore;
     this.combo += 1;
     this.maxCombo = Math.max(this.maxCombo, this.combo);
@@ -471,7 +538,7 @@ class DailyLineScene extends Phaser.Scene {
     }
 
     if (hazardHit) {
-      this.failPuzzle(hazardHit);
+      this.failPuzzle(hazardHit, 'hazard');
       this.renderScene();
       return;
     }
@@ -483,12 +550,22 @@ class DailyLineScene extends Phaser.Scene {
     }
 
     if (!this.isAnyBodyPointVisible(tailIndex)) {
-      this.failPuzzle(this.snakePath[this.headIndex]);
+      this.failPuzzle(this.snakePath[this.headIndex], 'escape');
       this.renderScene();
       return;
     }
 
     this.renderScene();
+  }
+
+  private finalizePendingAttempt(outcome: GestureAttempt['outcome']) {
+    if (!this.pendingAttempt) return;
+
+    this.attempts.push({
+      ...this.pendingAttempt,
+      outcome,
+    });
+    this.pendingAttempt = null;
   }
 
   private applyBounce(point: Point): Point {
@@ -549,6 +626,16 @@ class DailyLineScene extends Phaser.Scene {
       score: this.score,
       puzzlesSolved: this.puzzlesSolved,
       maxCombo: this.maxCombo,
+    }, {
+      attempts: [...this.attempts],
+      solveEvents: [...this.solveEvents],
+      failureEvents: [...this.failureEvents],
+      summary: {
+        score: this.score,
+        puzzlesSolved: this.puzzlesSolved,
+        maxCombo: this.maxCombo,
+        totalRunMs: Math.max(0, Math.round(this.time.now - this.runStartTime)),
+      },
     });
   }
 }
