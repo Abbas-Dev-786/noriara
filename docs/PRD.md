@@ -1,825 +1,514 @@
-# Product Requirements Document (PRD)
-
----
+# Product Requirements Document
 
 # Project Name
 
 **Daily Line** *(Working Title)*
 
-> One Line. One Run. One Chance.
+> Draw once. Let it move. Collect them all.
 
 Version: 1.0 (Phase 1 MVP)
 
 Status: Draft
 
-Owner: Product Team
-
 Platform:
+
 - Reddit Devvit
 - Devvit Web
-- Phaser 3
+- Phaser
 
 ---
 
-# 1. Vision
+## 1. Vision
 
-Build the most replayable daily puzzle game on Reddit.
+Build the most replayable daily gesture puzzle game on Reddit.
 
-Players return every day to compete in a new 30-second challenge where they solve an endless sequence of single-stroke puzzles that increase in difficulty.
+Players return every day to compete in a new 30-second challenge where they shape living lines. A player draws one continuous gesture, releases, and the line comes alive. It repeats the exact movement pattern over and over, collecting colored circles while avoiding black holes.
+
+The game is inspired by the magical clarity of Blek: simple input, expressive solutions, and a moving line that feels personal.
 
 The game is designed around three principles:
 
-- Instant to understand
-- Difficult to master
-- Impossible to perfect
-
-Every day is a fresh competition.
+- One gesture creates the entire solution.
+- The line keeps moving after release.
+- Every level has many elegant possible solutions.
 
 ---
 
-# 2. Problem Statement
+## 2. Problem Statement
 
 Most Reddit games are fun once.
 
 Very few become habits.
 
-Players need a reason to return tomorrow.
+Players need a reason to return tomorrow and a mechanic worth mastering.
 
-The game should create anticipation through:
+Daily Line creates anticipation through:
 
-- New daily puzzles
-- Global competition
-- Increasing mastery
-- Daily leaderboards
-- Personal improvement
+- A new daily seed.
+- The same fair puzzle sequence for everyone.
+- Fast runs with visible skill expression.
+- Daily leaderboards.
+- Replays that are interesting to watch.
 
 ---
 
-# 3. Product Goal
+## 3. Product Goal
 
 Create a daily ritual.
 
 Target player behavior:
 
-Morning
-
-↓
-
+```text
 Open Reddit
-
-↓
-
-Play Daily Line
-
-↓
-
+Start today's Daily Line run
+Draw living gestures for 30 seconds
 Compare score
-
-↓
-
-Check leaderboard
-
-↓
-
+Watch top replay
 Return tomorrow
+```
 
 ---
 
-# 4. Success Metrics
+## 4. Success Metrics
 
-## Primary KPI
+Primary KPI:
 
-Daily Active Users (DAU)
+- Daily Active Users (DAU)
 
----
+Secondary KPIs:
 
-## Secondary KPIs
+- D1 retention.
+- D7 retention.
+- Average session length.
+- Average puzzles solved.
+- Average daily attempts.
+- Leaderboard participation.
+- Replay views.
 
-Daily Retention (D1)
+MVP success:
 
-Weekly Retention (D7)
-
-Average Session Length
-
-Average Puzzles Solved
-
-Average Daily Attempts
-
-Leaderboard Participation
-
-Replay Views
-
----
-
-## MVP Success
-
-- 1,000+ Daily Plays
-- >35% D1 Retention
-- Average Session >40 sec
-- 80% Puzzle Completion Rate
-- <2 sec Loading Time
+- 1,000+ daily plays.
+- More than 35% D1 retention.
+- Average session longer than 40 seconds.
+- 80% of players collect at least one target in their first session.
+- Load time under 2 seconds.
 
 ---
 
-# 5. Target Audience
+## 5. Target Audience
 
-## Primary
+Primary:
 
-Puzzle lovers
+- Puzzle lovers.
+- Players who enjoy Blek, Monument Valley, Railbound, Euclidean Lands, Klocki, and elegant mobile puzzle games.
 
-Examples
+Secondary:
 
-- Blek
-- Monument Valley
-- Railbound
-- Euclidean Lands
-- Klocki
+- Competitive players.
+- Players who enjoy daily challenges, speedrunning, leaderboards, and personal bests.
 
----
+Tertiary:
 
-## Secondary
-
-Competitive players
-
-Players who enjoy
-
-- Daily challenges
-- Speedrunning
-- Leaderboards
-- Personal bests
+- Casual Reddit users looking for 30-second entertainment.
 
 ---
 
-## Tertiary
+## 6. Product Pillars
 
-Casual Reddit users
+### Elegant
 
-Looking for
+One mechanic. Infinite personality.
 
-30-second entertainment
+### Magical
 
----
+The player's drawing comes alive and keeps moving.
 
-# 6. Product Pillars
+### Competitive
 
-## Pillar 1
+Everyone plays the same daily sequence.
 
-Elegant
+### Fair
 
-One mechanic.
+No random gameplay changes after the run starts. Skill determines the score.
 
-Infinite possibilities.
+### Watchable
 
----
-
-## Pillar 2
-
-Competitive
-
-Everyone solves the same challenge.
+Top replays should be entertaining because every solution looks different.
 
 ---
 
-## Pillar 3
+## 7. Core Gameplay
 
-Replayable
+Every day players receive today's Daily Run.
 
-Every day is different.
+A Daily Run consists of 30 seconds.
+
+Each puzzle contains only:
+
+- Colored circles to collect.
+- Black holes to avoid.
+- The playfield boundaries.
+
+The player draws one continuous gesture. When they release, the drawing becomes a moving line.
+
+The moving line:
+
+- Keeps the length of the original gesture.
+- Repeats the gesture's movement pattern indefinitely.
+- Moves at a constant speed.
+- Collides along its whole body, not only at the head.
+- Collects colored circles on contact.
+- Is destroyed if any part touches a black hole.
+- Bounces on the top and bottom boundaries.
+- Fails if it fully leaves the left or right side before collecting all targets.
+
+If all colored circles are collected, the puzzle succeeds and the next puzzle appears immediately.
+
+If the line fails, the current puzzle resets and the player draws again. Failure costs time, not progress.
 
 ---
 
-## Pillar 4
+## 8. Core Gameplay Loop
 
-Fair
-
-Skill only.
-
-No randomness during gameplay.
-
----
-
-## Pillar 5
-
-Beautiful
-
-Minimal interface.
-
-Fluid animations.
-
-No clutter.
-
----
-
-# 7. Core Gameplay
-
-Every day players receive
-
-Today's Daily Run.
-
-A Daily Run consists of
-
-30 seconds.
-
-Players solve as many puzzles as possible.
-
-Each solved puzzle awards points.
-
-Difficulty increases continuously.
-
-At the end
-
-Final Score
-
-↓
-
+```text
+Player opens game
+Countdown starts
+30-second timer begins
+Puzzle appears
+Player draws one gesture
+Player releases
+Line comes alive
+Line collects targets or fails
+Next puzzle or retry
+Timer ends
+Final score
 Leaderboard
-
-↓
-
 Replay
-
-↓
-
 Return tomorrow
+```
 
 ---
 
-# 8. Core Gameplay Loop
+## 9. Daily Challenge
 
-Player Opens Game
+Every UTC day has one unique seed.
 
-↓
+Everyone receives the exact same puzzle sequence for that day.
 
-Countdown (3)
-
-↓
-
-30 Second Timer Starts
-
-↓
-
-Solve Puzzle
-
-↓
-
-Generate Next Puzzle
-
-↓
-
-Solve Again
-
-↓
-
-Difficulty Increases
-
-↓
-
-Timer Ends
-
-↓
-
-Final Score
-
-↓
-
-Leaderboard
-
-↓
-
-Replay
-
-↓
-
-Exit
-
-↓
-
-Return Tomorrow
+The puzzle generator must be deterministic so the client, server, and replay viewer can reconstruct the same boards.
 
 ---
 
-# 9. Daily Challenge
+## 10. Puzzle Structure
 
-Every day
+Phase 1 puzzles use a single canonical grammar:
 
-One unique seed.
+- Colored target circles.
+- Black hazard circles.
+- Top and bottom bounce boundaries.
+- Left and right escape boundaries.
+- Player-created moving gesture line.
 
-Everyone receives
+There are no Phase 1 start nodes, goal nodes, checkpoints, switches, walls, or separate route objectives.
 
-the exact same sequence.
+The objective is always:
 
-Fair competition.
-
-Daily challenge resets every UTC day.
-
----
-
-# 10. Puzzle Structure
-
-Every puzzle contains
-
-- Start Node
-- Goal Node(s)
-- Obstacles
-- Interactive Elements
-- Allowed Drawing Area
-
-Player draws
-
-ONE continuous line.
-
-Puzzle validates.
-
-If solved
-
-↓
-
-Next Puzzle
+```text
+Collect every colored circle without touching a black hole.
+```
 
 ---
 
-# 11. Difficulty Curve
+## 11. Gesture Capture
 
-Puzzle 1
+The entire game is built around capturing one continuous touch or mouse gesture.
 
-Tutorial difficulty
+Capture requirements:
 
-Puzzle 2
+- Record pointer coordinates as an ordered array of 2D points.
+- Reject gestures that are too short to produce meaningful movement.
+- Smooth or resample the gesture so the line looks fluid.
+- Use release as the transition from drawing to locomotion.
+- The drawn gesture length becomes the permanent visible body length for that attempt.
 
-Easy
-
-Puzzle 3
-
-Easy+
-
-Puzzle 4
-
-Medium
-
-Puzzle 5
-
-Medium+
-
-Puzzle 6
-
-Hard
-
-Puzzle 7
-
-Expert
-
-Puzzle 8+
-
-Impossible
-
-Difficulty scales continuously.
+Collision with targets and hazards starts after release, when the line is alive.
 
 ---
 
-# 12. Scoring
+## 12. Locomotion Model
 
-Score =
+After release, the line does not simply fly straight.
 
-Base Puzzle Value
+It repeats the player's gesture movement.
 
-+
+Implementation model:
 
-Remaining Time Bonus
+- Calculate the sequence of displacements between consecutive gesture points.
+- Move the line head through those displacements at constant speed.
+- When the head reaches the end of the gesture, continue by applying the same displacement sequence again.
+- Snap each repeated copy end-to-start so the movement path is continuous.
+- Render only the trailing segment whose length equals the original gesture length.
+- The tail follows the exact same repeated path as the head.
 
-+
-
-Combo Bonus
-
-+
-
-Perfect Bonus
-
----
-
-Example
-
-Puzzle Completed
-
-100
-
-Fast Solve
-
-+30
-
-Combo
-
-+20
-
-Perfect
-
-+10
-
-Total
-
-160
+This creates the "living line" effect: the drawing becomes a moving creature that keeps performing the player's motion.
 
 ---
 
-# 13. Combo System
+## 13. Boundaries
 
-Every consecutive solve
+Top and bottom:
 
-increases combo multiplier.
+- Solid reflective boundaries.
+- When the moving line crosses either boundary, its vertical trajectory reflects.
+- The line continues moving and repeating its pattern after the bounce.
 
-Miss
+Left and right:
 
-↓
-
-Combo resets.
-
----
-
-# 14. Timer
-
-30 seconds.
-
-Cannot pause.
-
-Cannot retry.
-
-One official submission per day.
-
-Practice mode may exist later.
+- Escape boundaries.
+- If the entire line leaves the screen horizontally and targets remain, the attempt fails.
+- If all targets have already been collected, the puzzle succeeds before escape matters.
 
 ---
 
-# 15. Leaderboards
+## 14. Difficulty Curve
 
-Daily
+Difficulty should increase through:
 
-Top Players
+- More colored targets.
+- More black holes.
+- More spatial planning.
+- Target and hazard placement that requires expressive gesture design.
+- Larger or trickier board relationships.
 
-Top Friends (Future)
+Difficulty should not increase through:
 
-Personal Best
-
-Today's Rank
-
-Percentile
-
----
-
-Displayed
-
-Player
-
-Score
-
-Puzzles Solved
-
-Completion Time
+- Tiny hitboxes.
+- Pixel-perfect gaps.
+- Hidden rules.
+- Text instructions.
+- Extra Phase 1 entity types.
 
 ---
 
-# 16. Replay System (MVP)
+## 15. Scoring
 
-Store
+Initial formula:
 
-- Drawing Path
-- Timestamp
-- Puzzle Seed
+```text
+Score = Puzzle Value + Speed Bonus + Combo Bonus
+```
 
-Player can watch
+Puzzle value increases with puzzle index and difficulty.
 
-Top 10 replays.
+Speed bonus rewards fast solves.
 
----
+Combo bonus rewards consecutive puzzle solves without failed attempts.
 
-# 17. Progression (Phase 1)
-
-No XP.
-
-No Levels.
-
-Player progression is
-
-Skill Progression.
-
-Metrics shown
-
-- Best Score
-- Current Streak
-- Highest Puzzle Reached
-- Personal Best
+Failure resets the combo but does not end the run.
 
 ---
 
-# 18. Daily Streak
+## 16. Timer
 
-Play
+The main run lasts 30 seconds.
 
-↓
+The timer:
 
-Streak +1
-
-Miss Day
-
-↓
-
-Reset
-
-Future reward system.
+- Starts after countdown.
+- Cannot pause.
+- Ends the current run immediately at zero.
+- Does not reset when a puzzle fails.
 
 ---
 
-# 19. User Flow
+## 17. Leaderboards
 
-Launch
+Daily leaderboard displays:
 
-↓
+- Rank.
+- Player.
+- Score.
+- Puzzles solved.
+- Final solve timestamp or tie-breaker metadata.
 
-Loading
+Future leaderboard surfaces:
 
-↓
-
-Today's Challenge
-
-↓
-
-Countdown
-
-↓
-
-Gameplay
-
-↓
-
-Results
-
-↓
-
-Leaderboard
-
-↓
-
-Replay
-
-↓
-
-Exit
+- Friends.
+- Weekly.
+- Seasonal.
+- Personal best.
 
 ---
 
-# 20. Functional Requirements
+## 18. Replay System
 
-## Gameplay
+Replays are essential because solutions are expressive.
 
-- Draw continuous line
-- Validate solution
-- Generate next puzzle
-- Increase difficulty
-- End at 30 seconds
+Store:
 
----
+- Daily seed.
+- Puzzle IDs.
+- Raw or resampled gesture point arrays.
+- Gesture release timestamps.
+- Solve/fail events.
+- Final score.
 
-## Backend
+Replay viewer reconstructs the boards and plays the moving lines back deterministically.
 
-- Generate Daily Seed
-- Store Score
-- Store Replay
-- Return Leaderboard
+MVP replay scope:
 
----
-
-## Frontend
-
-- Render puzzle
-- Draw line
-- Animate success
-- Display timer
-- Display score
+- Current user's own replay.
+- Top 10 daily replays.
 
 ---
 
-# 21. Non-functional Requirements
+## 19. Progression
 
-Load Time
+There is no XP, leveling, currency, or equipment.
 
-<2 seconds
+Progression is mastery.
 
-FPS
+Show:
 
-60 FPS
-
-Input Latency
-
-<16 ms
-
-Offline
-
-No
-
-Mobile First
-
-Yes
+- Best score.
+- Current streak.
+- Highest puzzle reached.
+- Personal best.
+- Best rank.
 
 ---
 
-# 22. Edge Cases
+## 20. Functional Requirements
 
-Player closes app
+Gameplay:
 
-↓
+- Capture one continuous gesture.
+- Smooth and resample the gesture.
+- Start locomotion on release.
+- Repeat the gesture movement indefinitely.
+- Render a constant-length moving line.
+- Detect collision across the full line body.
+- Collect colored targets.
+- Destroy on black-hole collision.
+- Bounce on top and bottom.
+- Fail on full horizontal escape with targets remaining.
+- Advance immediately after all targets are collected.
+- Run for 30 seconds.
 
-Run invalid
+Backend:
 
-Network lost
+- Resolve daily seed.
+- Store official run state.
+- Validate submitted gesture/replay data.
+- Recompute score.
+- Store leaderboard entries.
+- Return replay data.
 
-↓
+Frontend:
 
-Retry submission
-
-Invalid replay
-
-↓
-
-Discard
-
-Duplicate submission
-
-↓
-
-Reject
-
----
-
-# 23. Anti-cheat
-
-Server validates
-
-- Puzzle Seed
-- Replay
-- Solve Order
-- Completion Time
-
-Reject impossible runs.
+- Render puzzles.
+- Capture gesture input.
+- Animate the living line.
+- Show timer, score, and combo.
+- Show results, leaderboard, and replay screens.
 
 ---
 
-# 24. Accessibility
+## 21. Non-Functional Requirements
 
-Colorblind-safe palette
-
-Large touch targets
-
-High contrast mode
-
-Reduced motion option
-
----
-
-# 25. Analytics Events
-
-Game Opened
-
-Run Started
-
-Puzzle Solved
-
-Puzzle Failed
-
-Run Finished
-
-Leaderboard Viewed
-
-Replay Viewed
-
-Session Ended
+- Load time under 2 seconds.
+- 60 FPS gameplay.
+- Input latency under 16 ms.
+- Mobile-first layout.
+- Deterministic replay.
+- Colorblind-safe palette.
+- Large touch targets.
+- Reduced motion option.
 
 ---
 
-# 26. Out of Scope (Phase 1)
+## 22. Edge Cases
 
-Community-created puzzles
-
-Weekly events
-
-Boss fights
-
-Cosmetics
-
-Unlockables
-
-Achievements
-
-Friends leaderboard
-
-Guilds
-
-Season Pass
-
-Monetization
+- Gesture is too short: ignore and let the player draw again.
+- Player closes app mid-run: official run is invalid or treated according to server policy.
+- Network lost after run: retry submission if run token remains valid.
+- Invalid replay: reject.
+- Duplicate official submission: reject.
+- Generated puzzle is invalid: reject during generation and create another deterministic candidate.
 
 ---
 
-# 27. Future Roadmap
+## 23. Anti-Cheat
 
-## Phase 2
+The server validates:
 
-Community Progress
+- Daily seed.
+- Puzzle sequence.
+- Gesture point arrays.
+- Release timestamps.
+- Solve order.
+- Movement simulation.
+- Collision outcomes.
+- Completion timing.
+- Final score.
 
-Replay Sharing
-
-Weekly Events
-
-Cosmetics
-
-Themes
-
-Daily Badges
-
----
-
-## Phase 3
-
-Community Puzzle Builder
-
-Voting
-
-Featured Creators
-
-Puzzle Marketplace
-
-World Map
-
-Boss Events
-
-Seasonal Challenges
+Client-reported scores are never trusted.
 
 ---
 
-# 28. Risks
+## 24. Out of Scope for Phase 1
 
-## Risk
-
-Puzzle repetition
-
-Mitigation
-
-Procedural generation
-
----
-
-## Risk
-
-Leaderboard cheating
-
-Mitigation
-
-Replay validation
+- Start-to-goal path puzzles.
+- Connect templates.
+- Cover templates.
+- Efficiency route objectives.
+- Switches.
+- Teleporters.
+- Walls.
+- Moving obstacles.
+- Community-created puzzles.
+- Weekly events.
+- Cosmetics.
+- Achievements.
+- Monetization.
 
 ---
 
-## Risk
+## 25. Future Roadmap
 
-Difficulty spikes
+Future mechanics may be added only if they preserve the living-gesture identity.
 
-Mitigation
+Examples:
 
-Difficulty simulation
+- Moving targets.
+- Gravity or wind fields that affect the moving line.
+- Portals.
+- Mirrors.
+- Seasonal hazard variants.
+- Community-authored target/hazard layouts.
 
----
-
-## Risk
-
-Low retention
-
-Mitigation
-
-Daily content
-
-Replay system
-
-Community progression
+Future mechanics must not turn the game into a generic draw-a-path puzzle.
 
 ---
 
-# 29. Definition of Success
+## 26. Definition of Success
 
 A successful MVP should make players feel:
 
-"I can beat yesterday."
+> "I can make a better line."
 
-"I wonder what tomorrow's puzzle will be."
+> "How did the top player draw that?"
 
-"I want to watch how the #1 player solved this."
+> "I want to see tomorrow's board."
 
 If those three emotions exist, the product has achieved its core objective.
 
 ---
 
-# 30. Open Questions
+## 27. Open Questions
 
-- Should players get exactly one official run per day or allow multiple attempts while only the best score counts?
-- How much of the puzzle sequence should be deterministic versus procedurally varied?
-- Should replay viewing unlock only after submitting a run?
-- How should ties on the leaderboard be resolved?
-- What is the ideal difficulty progression to keep both new and expert players engaged?
-- Should future seasons introduce entirely new mechanics or only new puzzle layouts?
-
----
+- Should each user get one official run per day, or unlimited attempts with best score?
+- Should practice mode be available before the official run, after it, or both?
+- How much replay data can Devvit storage comfortably support?
+- Should top replays unlock only after a player submits today's run?
+- Should tie-breakers prioritize more puzzles solved, faster solve time, fewer failures, or earlier submission?

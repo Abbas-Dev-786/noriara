@@ -8,7 +8,7 @@ Daily Line will be built as a Devvit Web app so it can use familiar web technolo
 
 ### Use Phaser 3 for Gameplay
 
-Phaser will handle drawing, pointer input, puzzle rendering, animations, and replay playback.
+Phaser will handle gesture drawing, pointer input, living-line locomotion, puzzle rendering, animations, collision feedback, and replay playback.
 
 ### Use React for Screens
 
@@ -64,6 +64,26 @@ Reason:
 
 Replay data can grow quickly.
 
+### Phase 1 Uses Only Targets and Black Holes
+
+Default:
+
+Phase 1 puzzles contain colored target circles, black hazard circles, top/bottom bounce boundaries, and left/right escape boundaries.
+
+Reason:
+
+This keeps the MVP aligned with the living-gesture mechanic and avoids drifting into generic path-drawing puzzles.
+
+### Start/Goal and Connect Templates Are Excluded From Phase 1
+
+Default:
+
+No start nodes, goal nodes, Connect puzzles, Cover puzzles, or Efficiency route objectives in Phase 1.
+
+Reason:
+
+The canonical objective is always to collect all colored circles while avoiding black holes with a repeated moving gesture.
+
 ### Dynamic Obstacles Are Deferred
 
 Default:
@@ -72,13 +92,13 @@ No moving obstacles in Phase 1.
 
 Reason:
 
-Moving obstacles complicate fairness, validation, and replay determinism.
+Moving targets or hazards complicate fairness, validation, and replay determinism.
 
 ### Precision Difficulty Is Avoided
 
 Default:
 
-Difficulty increases through route planning and puzzle complexity, not tiny hitboxes.
+Difficulty increases through target/hazard layout, repeated-motion planning, bounce usage, and puzzle density, not tiny hitboxes.
 
 Reason:
 
@@ -91,4 +111,4 @@ This matches the GDD and makes the game fair on mobile.
 3. Should replay viewing unlock only after submitting today's run?
 4. Should the leaderboard show Reddit usernames publicly or use a privacy-preserving display name?
 5. Should ties prioritize fastest final submission time, fewer failed attempts, or shortest total solve time?
-
+6. Should practice mode use the same daily seed, random seeds, or both?

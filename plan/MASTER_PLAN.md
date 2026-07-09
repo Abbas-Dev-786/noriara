@@ -2,14 +2,18 @@
 
 ## Product Goal
 
-Build a Reddit-native daily competitive puzzle game using Devvit Web and Phaser.
+Build a Reddit-native daily competitive gesture puzzle game using Devvit Web, React, and Phaser.
 
-Players draw one continuous line to solve as many short puzzles as possible in a 30-second daily run. Everyone receives the same UTC daily puzzle sequence. The product loop is:
+Players draw one continuous gesture. When they release, the line comes alive, keeps its original body length, and repeats the captured movement pattern indefinitely. The moving line must collect every colored circle while avoiding black holes.
+
+Everyone receives the same UTC daily puzzle sequence.
+
+Product loop:
 
 ```text
 Open Reddit
 Start today's run
-Solve puzzles for 30 seconds
+Draw living gesture lines for 30 seconds
 Submit score
 Compare rank
 Watch top replay
@@ -20,42 +24,46 @@ Return tomorrow
 
 Daily Line should make players think:
 
-- I can beat yesterday.
-- I want to see how the top player solved it.
-- I wonder what tomorrow's challenge will be.
+- I can make a better line.
+- I want to see how the top player drew that.
+- I wonder what tomorrow's board will be.
 
 ## Core Product Pillars
 
-### 1. Daily Habit
+### 1. Living Gesture
 
-The game must give users a reason to return every day through daily seeds, personal bests, streaks, and leaderboards.
+The player's drawing becomes the game object. It repeats the drawn movement and feels alive.
 
-### 2. Competitive Fairness
+### 2. Daily Habit
 
-Everyone plays the same challenge for the same UTC day. The server validates submitted runs before accepting scores.
+Daily seeds, personal bests, streaks, leaderboards, and replays give users a reason to return.
 
-### 3. One-Mechanic Mastery
+### 3. Competitive Fairness
 
-The player draws a single continuous line. Depth comes from puzzle layouts, route planning, timing, and optimization.
+Everyone plays the same challenge for the same UTC day. The server validates submitted gestures before accepting scores.
 
-### 4. Short Sessions
+### 4. One-Mechanic Mastery
 
-The main run is 30 seconds. A complete session should fit naturally inside Reddit browsing behavior.
+Depth comes from shaping a repeating line that collects targets, avoids hazards, uses bounces, and stays on screen.
 
-### 5. Replayable Spectatorship
+### 5. Watchable Replays
 
-Top runs should be watchable. Replays should help players learn and create curiosity.
+Top runs should be entertaining because every player's gesture solution looks different.
 
 ## Complete Product Scope
 
 The complete product includes:
 
 - Devvit Web app shell.
-- Phaser 3 gameplay canvas.
-- React UI for screens, HUD, leaderboards, and replay controls.
+- Phaser gameplay canvas.
+- React UI for home, HUD, results, leaderboards, and replay controls.
 - Daily UTC seed system.
-- Procedural puzzle generator.
-- Puzzle validation.
+- Procedural target/hazard layout generator.
+- Gesture capture and smoothing.
+- Living-line locomotion.
+- Full-body line collision.
+- Top/bottom bounce boundaries.
+- Left/right escape failure.
 - 30-second daily run.
 - Score, combo, speed bonus, and puzzle progression.
 - Daily leaderboard.
@@ -66,9 +74,8 @@ The complete product includes:
 - Accessibility controls.
 - Mobile-first responsive UX.
 - Audio, haptics, animation, and polish.
-- Future seasonal mechanics.
-- Future community-created puzzles.
-- Future weekly and monthly events.
+- Future seasonal mechanics that preserve living-gesture play.
+- Future community-created target/hazard layouts.
 
 ## Development Strategy
 
@@ -85,38 +92,85 @@ Each phase must satisfy three conditions before moving forward:
 | Phase | Name | Main Outcome |
 | --- | --- | --- |
 | 0 | Foundation | Devvit Web + React + Phaser scaffold runs locally |
-| 1 | MVP Daily Run | A complete 30-second single-player daily run works |
+| 1 | MVP Daily Run | A complete 30-second local run with living-line gesture puzzles works |
 | 2 | Competitive Loop | Scores, leaderboard, one official daily run, and basic anti-cheat work |
 | 3 | Retention and Polish | Streaks, stats, replays, accessibility, mobile polish |
-| 4 | Content Expansion | More puzzle types, generator quality, difficulty simulation |
-| 5 | Community and Live Ops | Community puzzles, events, seasons, moderation, and live operations |
+| 4 | Content Expansion | Better target/hazard generator, difficulty simulation, future mechanic prototypes |
+| 5 | Community and Live Ops | Community layouts, events, seasons, moderation, and live operations |
 
 ## Recommended MVP Boundary
 
-Phase 1 should not attempt the full product. It should prove the core game is fun:
+Phase 1 should prove the core mechanic is fun.
+
+Include:
 
 - 30-second timer.
-- One continuous line input.
-- Three puzzle types: Connect, Collect, Avoid.
+- One continuous gesture input.
+- Gesture smoothing/resampling.
+- Release-to-locomotion transition.
+- Repeating movement pattern.
+- Constant-length moving line body.
+- Colored circles as targets.
+- Black circles as hazards.
+- Full-body collision.
+- Top/bottom bounce.
+- Left/right escape failure.
 - Deterministic daily seed.
 - Local score calculation.
 - End screen.
 - Basic visual feedback.
 
-Leaderboards, server submissions, replays, streaks, and anti-cheat should start in Phase 2 and Phase 3.
+Do not include in Phase 1:
+
+- Start-to-goal path puzzles.
+- Connect templates.
+- Cover templates.
+- Efficiency route objectives.
+- Switches.
+- Teleporters.
+- Walls.
+- Moving obstacles.
+- Leaderboards.
+- Server submissions.
+- Replay storage.
+- Streaks.
+- Full anti-cheat.
+
+Leaderboards, server submissions, replays, streaks, and anti-cheat start in Phase 2 and Phase 3.
 
 ## Primary Risks
 
-### Puzzle Generator Quality
+### Locomotion Does Not Feel Magical
 
-If generated puzzles feel random, unfair, repetitive, or unsolvable, the game will not retain users.
+If the line does not clearly repeat the player's gesture and feel alive, the game fails.
 
 Mitigation:
 
-- Start with simple templates.
-- Add generated puzzle validation early.
-- Build deterministic test seeds.
-- Keep precision requirements generous.
+- Implement gesture replay as the first real gameplay system.
+- Tune speed, smoothing, and line length early.
+- Test with many gesture shapes.
+
+### Collision Feels Unfair
+
+If the tail hits a black hole and the player cannot tell why, failure feels arbitrary.
+
+Mitigation:
+
+- Keep visual and collision radii aligned.
+- Show clear collision feedback.
+- Use generous target sizes.
+- Avoid tiny gaps.
+
+### Puzzle Generator Quality
+
+If generated target/hazard layouts feel random, impossible, or repetitive, the game will not retain users.
+
+Mitigation:
+
+- Start with simple conservative layout archetypes.
+- Add deterministic seed tests.
+- Add layout validation and rejection reasons.
+- Keep Phase 1 entity vocabulary small.
 
 ### Anti-Cheat Complexity
 
@@ -124,39 +178,28 @@ Client-reported scores cannot be trusted.
 
 Mitigation:
 
-- Capture path data and timestamps.
-- Recompute score server-side.
-- Validate daily seed, puzzle order, solve timing, and impossible movements.
-- Store only validated scores.
+- Capture gesture point arrays and timestamps.
+- Recompute locomotion and scoring server-side.
+- Validate daily seed, puzzle order, timing, collisions, and solve events.
 
 ### Scope Creep
 
-The full design includes seasons, cosmetics, community puzzles, and live ops. Building those too early will delay the playable product.
+The full roadmap includes seasons, cosmetics, community layouts, and live ops. Building those too early will delay the playable product.
 
 Mitigation:
 
-- Keep Phase 1 and Phase 2 focused on the daily competitive loop.
-- Add future systems only after retention basics work.
-
-### Performance and Input Feel
-
-The drawing line must feel instant and smooth.
-
-Mitigation:
-
-- Use Phaser for pointer input and rendering.
-- Test on mobile viewport early.
-- Keep gameplay UI minimal.
-- Avoid heavy runtime puzzle computation during active drawing.
+- Keep Phase 1 and Phase 2 focused on the daily competitive living-line loop.
+- Add future systems only after the core mechanic is strong.
 
 ## Final Product Success Criteria
 
 Daily Line is successful when:
 
-- A new user understands the goal in under 5 seconds.
+- A new user understands colored targets and black holes in under 5 seconds.
 - A first session completes in under 1 minute.
+- Drawing feels immediate.
+- Release makes the line feel alive.
 - The daily run feels fair and replayable.
 - The leaderboard creates immediate comparison.
 - Top replays are interesting to watch.
 - Players have a clear reason to return tomorrow.
-

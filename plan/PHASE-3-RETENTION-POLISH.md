@@ -82,8 +82,10 @@ Store:
 
 - Daily seed.
 - Puzzle ids.
-- Path samples.
+- Gesture point samples.
+- Release timestamps.
 - Solve events.
+- Failure events.
 - Timing.
 - Final score.
 
@@ -104,7 +106,7 @@ Features:
 - Restart.
 - Exit.
 - Show score and rank.
-- Draw the line over recreated puzzles.
+- Replay the drawing phase and living-line locomotion over recreated puzzles.
 
 ## UX Polish
 
@@ -201,14 +203,14 @@ Shows:
 
 ### 3. Replay Serialization
 
-- Compress path samples if needed.
+- Compress gesture samples if needed.
 - Version replay format.
 - Add replay size guard.
 
 ### 4. Replay Viewer
 
 - Recreate puzzle sequence.
-- Animate path samples.
+- Animate gesture drawing and living-line movement.
 - Add controls.
 
 ### 5. Replay Leaderboard Integration
@@ -265,11 +267,10 @@ Phase 3 is complete when the app clearly communicates progress, comparison, and 
 
 Mitigation:
 
-Sample path points at a fixed interval, simplify paths, cap replay count, and reject oversized submissions.
+Sample gesture points at a fixed interval, simplify gestures without changing motion meaning, cap replay count, and reject oversized submissions.
 
 ### Polish Delays Core Work
 
 Mitigation:
 
 Prioritize game feel changes that directly affect drawing, success, failure, and replay comprehension.
-

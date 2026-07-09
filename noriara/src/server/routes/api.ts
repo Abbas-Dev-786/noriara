@@ -7,6 +7,8 @@ import type {
   HealthResponse,
   BootstrapResponse,
 } from '../../shared/api';
+import { generatePuzzlesForSeed } from '../../shared/puzzle';
+import { generateSeed } from '../../shared/seed';
 
 type ErrorResponse = {
   status: 'error';
@@ -23,10 +25,14 @@ api.get('/health', (c) => {
 });
 
 api.get('/bootstrap', async (c) => {
+  const date = new Date().toISOString().slice(0, 10);
+  const seed = generateSeed(date);
+
   return c.json<BootstrapResponse>({
     status: 'ok',
-    seed: 'seed-placeholder',
-    puzzles: [],
+    date,
+    seed,
+    puzzles: generatePuzzlesForSeed(seed),
   });
 });
 
@@ -108,4 +114,3 @@ api.post('/decrement', async (c) => {
     type: 'decrement',
   });
 });
-

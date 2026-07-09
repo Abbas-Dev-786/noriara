@@ -4,19 +4,21 @@
 
 Build the first playable version of Daily Line.
 
-This phase ends when a player can complete a full 30-second local daily run with deterministic puzzles, scoring, and a results screen.
+This phase ends when a player can complete a full 30-second local run using the real living-gesture mechanic: draw one line, release it, watch it repeat, collect colored circles, avoid black holes.
 
 ## Why This Phase Exists
 
-The core game must be fun before leaderboards, streaks, and replays matter.
+The core mechanic must feel magical before leaderboards, streaks, and replays matter.
 
 Phase 1 proves:
 
 - Drawing feels good.
-- The puzzle mechanic is understandable.
+- Release makes the line come alive.
+- The repeated movement is understandable.
+- Full-body collision feels fair.
+- Target collection is satisfying.
+- Failure is readable and fast.
 - A 30-second run has tension.
-- Puzzle progression works.
-- The score loop is satisfying.
 
 ## Scope
 
@@ -24,13 +26,18 @@ Phase 1 proves:
 
 - 30-second run.
 - Countdown.
-- One continuous line drawing.
-- Three puzzle types:
-  - Connect.
-  - Collect.
-  - Avoid.
+- One continuous gesture capture.
+- Gesture smoothing/resampling.
+- Release-triggered locomotion.
+- Repeating movement pattern.
+- Constant-length moving line body.
+- Colored circle targets.
+- Black circle hazards.
+- Full-body collision.
+- Top/bottom bounce boundaries.
+- Left/right escape failure.
 - Deterministic daily seed.
-- Deterministic puzzle sequence.
+- Deterministic target/hazard puzzle sequence.
 - Basic difficulty progression.
 - Local scoring.
 - Combo counter.
@@ -40,14 +47,21 @@ Phase 1 proves:
 
 ### Not Included
 
+- Start-to-goal path puzzles.
+- Connect templates.
+- Cover templates.
+- Efficiency or shortest-path objectives.
+- Switches.
+- Teleporters.
+- Walls.
+- Moving obstacles.
 - Server score submission.
 - Daily leaderboard.
 - Persistent streaks.
 - Replay storage.
 - Full anti-cheat.
-- Community puzzles.
+- Community layouts.
 - Seasonal mechanics.
-- Moving obstacles.
 
 ## Gameplay Rules
 
@@ -56,21 +70,58 @@ Phase 1 proves:
 - Player taps Play.
 - Countdown appears: 3, 2, 1, GO.
 - 30-second timer starts.
+- The first target/hazard board appears.
 
 ### Drawing
 
-- Player draws one continuous line.
-- Releasing the pointer evaluates the attempt.
-- If solved, next puzzle appears immediately.
-- If failed, the current puzzle resets quickly.
+- Player draws one continuous gesture.
+- The line appears immediately under the pointer.
+- The game records an ordered point array.
+- The line is smoothed or resampled for stable rendering and locomotion.
+- Collision with targets and hazards does not apply during drawing.
+
+### Release
+
+- Releasing the pointer ends drawing.
+- The gesture becomes a moving line.
+- The original gesture length becomes the line body's permanent length for that attempt.
+- The player cannot change the gesture after release.
+
+### Locomotion
+
+- The line head repeats the captured gesture's displacement sequence indefinitely.
+- The repeated copies snap end-to-start.
+- The body keeps the original gesture length.
+- The tail follows the exact path traveled by the head.
+- The line moves at a constant speed.
+
+### Targets
+
+- Colored circles are objectives.
+- Any part of the moving line touching a target collects it.
+- A collected target disappears with a soft pop or fade.
+- Collecting the final target succeeds the puzzle.
+
+### Hazards
+
+- Black circles are hazards.
+- Any part of the moving line touching a hazard fails the attempt.
+- Failure should show a clear black-hole or collapse effect.
+
+### Boundaries
+
+- Top and bottom boundaries reflect the moving line's vertical trajectory.
+- Left and right boundaries are exits.
+- If the whole line leaves left or right while targets remain, the attempt fails.
 
 ### Timer
 
 - Timer is always visible.
 - Timer cannot pause.
+- Timer does not reset on failure.
 - When time reaches zero, gameplay freezes and results appear.
 
-### Scoring
+## Scoring
 
 Initial MVP formula:
 
@@ -80,50 +131,34 @@ score = puzzleBaseScore + speedBonus + comboBonus
 
 Suggested starting values:
 
+- Tutorial puzzle: 50.
 - Easy puzzle: 100.
 - Medium puzzle: 200.
 - Hard puzzle: 350.
 - Speed bonus: 0-50.
 - Combo bonus: 10 per active combo level.
 
-## Puzzle Types
+Combo rules:
 
-### Connect
+- Solve puzzle: combo increases.
+- Fail attempt: combo resets.
+- Timer end: final score is shown.
 
-Goal:
+## Puzzle Grammar
 
-Draw from start point to goal point without hitting obstacles.
+Phase 1 has one canonical puzzle grammar:
 
-Validation:
+```text
+Targets + Hazards + Boundaries + Living Gesture Line
+```
 
-- Path starts within start radius.
-- Path ends within goal radius.
-- Path does not collide with walls or hazards.
+Objective:
 
-### Collect
+```text
+Collect all colored circles without touching black holes.
+```
 
-Goal:
-
-Touch all checkpoints in one continuous line.
-
-Validation:
-
-- Path starts within start radius.
-- All checkpoints are touched.
-- Optional goal must be reached after checkpoints.
-- Path does not collide with hazards.
-
-### Avoid
-
-Goal:
-
-Reach the goal while avoiding walls or hazard shapes.
-
-Validation:
-
-- Path starts within start radius.
-- Path reaches goal.
-- Path never intersects hazard geometry.
+There are no start nodes, goal nodes, checkpoints, walls, or separate path objectives in Phase 1.
 
 ## Generator Rules
 
@@ -132,38 +167,88 @@ The Phase 1 generator should be conservative.
 Rules:
 
 - Use seeded randomness.
+- Generate target circle positions.
+- Generate hazard circle positions.
 - Keep all geometry inside safe play bounds.
+- Keep visual and collision radii aligned.
+- Avoid targets overlapping hazards.
 - Avoid tiny gaps.
 - Maintain generous hit radii.
-- Generate only static puzzles.
+- Generate only static target/hazard boards.
 - Reject layouts that fail basic validation.
+
+## Layout Archetypes
+
+These are layout patterns, not separate puzzle types.
+
+### Open Sweep
+
+Targets are placed in open space with no hazards.
+
+Purpose:
+
+- Teach collection and repeated movement.
+
+### Thread the Hazard
+
+Targets are near one or more black holes.
+
+Purpose:
+
+- Teach that the whole body must avoid hazards.
+
+### Bounce Catch
+
+Targets reward using top/bottom bounce.
+
+Purpose:
+
+- Teach boundary reflection.
+
+### Cluster Split
+
+Targets appear in separate clusters.
+
+Purpose:
+
+- Encourage gestures that repeat across multiple areas.
+
+### Escape Pressure
+
+Targets are placed so a line may leave horizontally before solving.
+
+Purpose:
+
+- Teach that horizontal escape fails unsolved attempts.
 
 ## Difficulty Progression
 
 Suggested progression:
 
-| Puzzle Index | Difficulty | Allowed Types |
+| Puzzle Index | Difficulty | Layout |
 | --- | --- | --- |
-| 1 | Tutorial | Connect |
-| 2 | Very Easy | Connect |
-| 3 | Easy | Connect, Collect |
-| 4 | Easy+ | Connect, Collect, Avoid |
-| 5 | Medium | Collect, Avoid |
-| 6 | Medium+ | Collect, Avoid |
-| 7+ | Hard | Connect, Collect, Avoid |
+| 1 | Tutorial | 1 target, no hazard |
+| 2 | Very Easy | 2 targets, no hazard |
+| 3 | Easy | 2 targets, 1 simple hazard |
+| 4 | Easy+ | 3 targets, 1 hazard |
+| 5 | Medium | 3 targets, 2 hazards |
+| 6 | Medium+ | Bounce opportunity, 2 hazards |
+| 7+ | Hard | Denser layouts, still fair |
 
 Difficulty should increase through:
 
-- More obstacles.
-- More checkpoints.
-- Longer route planning.
-- More decision points.
+- More targets.
+- More hazards.
+- More spatial planning.
+- Bounce usage.
+- Escape pressure.
 
 Difficulty should not increase through:
 
 - Tiny hitboxes.
 - Pixel-perfect gaps.
 - Invisible rules.
+- New unrelated puzzle types.
 
 ## User Interface
 
@@ -193,7 +278,7 @@ Shows:
 - Puzzles solved.
 - Highest combo.
 - Best local score for current device.
-- Play practice again button.
+- Practice again button.
 
 ## Implementation Tasks
 
@@ -203,50 +288,70 @@ States:
 
 - home.
 - countdown.
-- playing.
-- resolvingAttempt.
+- drawing.
+- locomotion.
+- resolvingSuccess.
+- resolvingFailure.
 - finished.
 - results.
 
-### 2. Input System
+### 2. Gesture Input System
 
 - Capture pointer down, move, and up.
-- Store path samples.
-- Smooth rendered line.
-- Prevent multi-touch confusion.
-- Reset line after solve or fail.
+- Store raw gesture samples.
+- Lock to one pointer.
+- Smooth or resample path.
+- Reject very short gestures.
+- Render line while drawing.
+- Start locomotion on release.
 
-### 3. Puzzle Model
+### 3. Locomotion System
 
-Define shared puzzle types:
+- Convert gesture points to displacement vectors.
+- Move line head along repeated vector sequence.
+- Maintain head-position history.
+- Render trailing body at original gesture length.
+- Keep speed constant.
+- Preserve deterministic behavior for future replay/server validation.
 
-- `Puzzle`.
-- `PuzzleType`.
+### 4. Boundary System
+
+- Reflect vertical movement at top and bottom.
+- Detect when the entire body has escaped left or right.
+- Fail only if horizontal escape happens before all targets are collected.
+
+### 5. Puzzle Model
+
+Define shared types:
+
+- `PuzzleLayout`.
+- `TargetCircle`.
+- `HazardCircle`.
 - `Point`.
-- `CircleGoal`.
-- `Obstacle`.
-- `Checkpoint`.
+- `Gesture`.
+- `LineBody`.
 
-### 4. Geometry Helpers
+### 6. Geometry Helpers
 
 Implement:
 
 - Distance point to point.
 - Distance point to segment.
 - Segment/circle collision.
-- Segment/rectangle collision.
-- Path hits circle.
-- Path hits obstacle.
+- Polyline/circle collision.
+- Body bounds.
+- Gesture length.
+- Resampling.
 
-### 5. Puzzle Generator
+### 7. Puzzle Generator
 
-- Generate deterministic puzzle from seed and puzzle index.
-- Generate Connect puzzles first.
-- Add Collect.
-- Add Avoid.
+- Generate deterministic layouts from seed and puzzle index.
+- Generate targets.
+- Generate hazards.
 - Add validation/retry loop.
+- Add fixed deterministic test seeds.
 
-### 6. Scoring
+### 8. Scoring
 
 - Calculate base score.
 - Calculate speed bonus.
@@ -254,19 +359,22 @@ Implement:
 - Track puzzles solved.
 - Track highest combo.
 
-### 7. Feedback
+### 9. Feedback
 
+- Target pop/fade.
 - Success flash.
 - Score popup.
 - Combo pulse.
+- Hazard suck-in/collapse.
 - Failure shake.
 - Quick reset.
 - Time-up transition.
 
-### 8. Results Screen
+### 10. Results Screen
 
 - Show local run summary.
-- Allow practice replay of the same local run if feasible.
+- Show best local score if available.
+- Allow practice replay of the same daily seed if feasible.
 - Allow return home.
 
 ## Milestone Build
@@ -277,7 +385,11 @@ At the end of Phase 1, a user can:
 Open app
 Tap Play
 Wait for countdown
-Draw lines to solve puzzles
+Draw one gesture
+Release
+Watch the line repeat and move
+Collect colored circles
+Avoid black holes
 Play for 30 seconds
 See score and puzzles solved
 Play again locally
@@ -285,11 +397,18 @@ Play again locally
 
 ## Validation Checklist
 
-- [ ] First-time player can understand the first puzzle without instructions.
+- [ ] First-time player understands colored circles and black holes without text.
 - [ ] Drawing appears immediately under pointer/finger.
+- [ ] Releasing starts locomotion instantly.
+- [ ] The moving line repeats the drawn gesture pattern.
+- [ ] The line body keeps the original gesture length.
+- [ ] The tail follows the head path.
+- [ ] Full-body collision collects targets.
+- [ ] Full-body collision fails on hazards.
+- [ ] Top and bottom bounce is visible and understandable.
+- [ ] Full horizontal escape fails only when targets remain.
 - [ ] A full 30-second run completes.
-- [ ] At least three puzzle types can appear.
-- [ ] Same UTC date generates the same puzzle sequence.
+- [ ] Same UTC date generates the same target/hazard sequence.
 - [ ] Scoring increases when puzzles are solved.
 - [ ] Combo increases on consecutive solves.
 - [ ] Failure resets current puzzle without ending the run.
@@ -298,25 +417,24 @@ Play again locally
 
 ## Acceptance Criteria
 
-Phase 1 is complete when the local game loop is fun enough to replay without leaderboard support.
+Phase 1 is complete when the local game loop is fun enough to replay without leaderboard support and the living-line mechanic is clearly the center of the experience.
 
 ## Risks
 
-### Puzzle Feel Is Too Abstract
+### Locomotion Feels Like a Bug Instead of Magic
 
 Mitigation:
 
-Make start, goal, checkpoints, and hazards visually distinct. Use animation and shape language, not text instructions.
+Tune smoothing, speed, line width, and release transition until the repeated motion is readable.
 
-### Drawing Feels Laggy
+### Collision Feels Unfair
 
 Mitigation:
 
-Keep Phaser scene simple. Avoid React state updates during pointer movement.
+Use visible collision alignment, generous radii, and clear collision feedback.
 
 ### Puzzles Are Too Easy or Too Hard
 
 Mitigation:
 
-Start with hand-tuned generator parameters and add deterministic seed test cases.
-
+Start with conservative layout archetypes and add deterministic seed review.

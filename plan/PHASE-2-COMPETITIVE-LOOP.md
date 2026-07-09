@@ -51,7 +51,7 @@ Server returns user state and today's seed
 Client calls /api/run/start
 Server creates runId
 Player completes run
-Client submits path/replay summary
+Client submits gesture/replay summary
 Server validates run
 Server recomputes score
 Server writes leaderboard entry
@@ -107,7 +107,7 @@ Server validation should check:
 - Submitted puzzle solves are in valid order.
 - Claimed score equals server recomputed score.
 - Submitted timestamps fit inside 30-second run.
-- Path samples solve each puzzle.
+- Submitted gestures reproduce each claimed solve through deterministic locomotion.
 - Movement speed is within generous plausible bounds.
 - Duplicate official submission is rejected.
 
@@ -187,14 +187,17 @@ Payload should include:
 
 - runId.
 - date.
-- path samples.
+- gesture point samples.
+- release timestamps.
 - solve events.
+- failure events.
 - client score summary.
 
 ### 4. Server Validation
 
 - Recreate puzzle sequence.
-- Validate path samples.
+- Simulate gesture locomotion.
+- Validate target collection, hazard collision, and boundary outcomes.
 - Recompute score.
 - Accept or reject.
 
@@ -255,4 +258,3 @@ Use generous tolerances for collision and timing. Prioritize rejecting obvious c
 Mitigation:
 
 Add local/dev seed users or a debug fixture route only in development.
-

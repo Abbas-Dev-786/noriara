@@ -26,8 +26,8 @@ export type HealthResponse = {
 
 export type BootstrapResponse = {
   status: 'ok';
+  date: string;
   seed: string;
   puzzles: PuzzleLayout[];
 };
-
 

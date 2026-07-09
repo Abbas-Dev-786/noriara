@@ -1,626 +1,496 @@
-# Game Design Document (GDD)
+# Game Design Document
 
-# Part 4 — Content Bible, Puzzle Mechanics & Live Operations
-
----
+# Part 4 - Content Bible, Puzzle Mechanics & Live Operations
 
 # Project
 
-**Daily Line** _(Working Title)_
+**Daily Line** *(Working Title)*
 
-Version: 1.0
+Version:
+
+1.0
 
 Document:
+
 Content Bible & Live Operations
 
 ---
 
-# 1. Purpose
+## 1. Purpose
 
-This document defines:
+This document defines the content vocabulary for Daily Line.
 
-- Puzzle vocabulary
-- Puzzle mechanics
-- Difficulty evolution
-- Future content roadmap
-- Seasonal content
-- Live operations strategy
+The core product is not a generic line puzzle platform. It is a living-gesture puzzle game.
 
-Unlike traditional puzzle games that rely on handcrafted levels, Daily Line is designed around a **small set of mechanics** that can generate thousands of meaningful combinations. Well-designed puzzle games often build depth by combining a limited number of mechanics in increasingly interesting ways rather than constantly introducing new rules. :contentReference[oaicite:0]{index=0}
+Every content decision must preserve this identity:
+
+> The player draws a gesture, releases it, and the moving line repeats that gesture to collect colored circles while avoiding black holes.
 
 ---
 
-# 2. Content Philosophy
+## 2. Content Philosophy
 
 Every puzzle should satisfy four principles.
 
-## Easy to Learn
+### Easy to Read
 
-Player understands the objective immediately.
+The board contains simple geometry and no text instructions.
 
----
+### Hard to Master
 
-## Hard to Master
+Depth comes from imagining how the gesture will repeat.
 
-The challenge comes from planning.
+### Short
 
-Never from hidden rules.
+Each puzzle should be solvable in 1-5 seconds by a skilled player.
 
----
+### Beautiful
 
-## Short
-
-Every puzzle should be solvable within
-
-1–5 seconds.
+Solutions should look elegant and be enjoyable to watch in replay.
 
 ---
 
-## Beautiful
+## 3. Phase 1 Puzzle Grammar
 
-Solutions should look elegant.
+Every Phase 1 puzzle is composed from:
 
-Players should enjoy watching replays.
-
----
-
-# 3. Puzzle Grammar
-
-Every puzzle is composed from five building blocks.
-
-```
-Start Point
-
-+
-
-Goal
-
-+
-
-Rules
-
-+
-
-Obstacles
-
-+
-
-Environment
+```text
+Colored target circles
+Black hazard circles
+Top/bottom bounce boundaries
+Left/right escape boundaries
+Player's living gesture line
 ```
 
-Different combinations create different experiences.
+Objective:
+
+```text
+Collect all colored circles without touching black holes.
+```
+
+No other active puzzle vocabulary belongs in Phase 1.
 
 ---
 
-# 4. Core Puzzle Types (Phase 1)
+## 4. Core Entities
 
-## Type 1
+### Colored Target Circles
 
-### Connect
+Role:
 
-Objective
+- Objective.
 
-Connect Start → Goal.
+Rules:
 
-Difficulty Variables
+- Collected by any part of the moving line.
+- Disappear after collection.
+- All targets collected means puzzle success.
 
-- Path Length
-- Obstacle Density
-- Multiple Routes
+Difficulty variables:
 
----
+- Count.
+- Spacing.
+- Placement relative to hazards.
+- Placement relative to bounce opportunities.
 
-## Type 2
+### Black Hazard Circles
 
-### Cover
+Role:
 
-Completely cover an object using one continuous line.
+- Failure object.
 
-Difficulty Variables
+Rules:
 
-- Shape Complexity
-- Object Size
-- Available Space
+- Any moving line body collision fails the attempt.
+- Visual radius must match collision radius.
+- Failure should clearly show the collision.
 
----
+Difficulty variables:
 
-## Type 3
+- Count.
+- Radius.
+- Placement.
+- Relationship to likely repeated gesture paths.
 
-### Collect
+### Boundaries
 
-Touch every checkpoint.
+Top and bottom:
 
-Difficulty Variables
+- Bounce.
 
-- Number of Checkpoints
-- Placement
-- Order Constraints
+Left and right:
 
----
+- Escape/fail if unsolved.
 
-## Type 4
+Difficulty variables:
 
-### Avoid
-
-Reach destination without touching hazards.
-
-Difficulty Variables
-
-- Hazard Count
-- Hazard Movement
-- Narrow Corridors
+- Whether a puzzle benefits from bounce.
+- How much room the player has before horizontal escape.
 
 ---
 
-## Type 5
+## 5. Explicitly Excluded from Phase 1
 
-### Efficiency
+The following are not Phase 1 puzzle types:
 
-Solve using the shortest valid path.
+- Connect Start -> Goal.
+- Cover an object.
+- Efficiency or shortest path objectives.
+- Route puzzles.
+- Walls.
+- Buttons.
+- Switches.
+- Teleporters.
+- Pressure plates.
+- Moving obstacles.
+- Rotating barriers.
 
-Difficulty Variables
-
-- Multiple Valid Solutions
-- Trade-offs
-- Optimization
-
----
-
-# 5. Puzzle Elements
-
-Every puzzle is built from reusable elements.
-
-## Static Elements
-
-- Walls
-- Goals
-- Checkpoints
-- Safe Zones
-- Start Point
+These may be considered later only if they enhance the living-line mechanic and remain understandable without text.
 
 ---
 
-## Dynamic Elements
-
-- Moving Obstacles
-- Rotating Barriers
-- Sliding Gates
-- Oscillating Hazards
-
----
-
-## Interactive Elements
-
-- Buttons
-- Switches
-- Teleporters
-- Pressure Plates
-
-Reserved for future seasons.
-
----
-
-# 6. Puzzle Difficulty Variables
+## 6. Difficulty Variables
 
 The generator adjusts:
 
-- Path Complexity
-- Number of Decisions
-- Spatial Density
-- Obstacle Speed
-- Goal Count
+- Target count.
+- Hazard count.
+- Target spacing.
+- Hazard radius.
+- Hazard proximity to likely paths.
+- Need for bouncing.
+- Board density.
 
-Never increase difficulty by
+Never increase difficulty by:
 
-❌ Smaller hitboxes
-
-❌ Invisible rules
-
-❌ Pixel-perfect precision
+- Smaller-than-expected hitboxes.
+- Invisible rules.
+- Pixel-perfect precision.
+- Required text instructions.
+- Abruptly introducing unrelated puzzle types.
 
 ---
 
-# 7. Puzzle Generation Rules
+## 7. Puzzle Generation Rules
 
 Every generated puzzle must satisfy:
 
-✅ Solvable
-
-✅ At least one elegant solution
-
-✅ No dead ends
-
-✅ No impossible geometry
-
-✅ Fits within 30-second session pacing
+- Targets and hazards are visually distinct.
+- No target overlaps a hazard.
+- The first puzzle can be solved with a simple gesture.
+- Early puzzles avoid hazards or use only obvious hazards.
+- Hit radii are generous.
+- The board fits mobile play.
+- The puzzle supports many possible gesture solutions.
+- The puzzle can be reconstructed deterministically from seed and index.
 
 ---
 
-# 8. Difficulty Progression
+## 8. Difficulty Progression
 
 Within a single run:
 
-```
-Puzzle 1
-
-Tutorial
-
-↓
-
-Puzzle 2
-
-Easy
-
-↓
-
-Puzzle 3
-
-Easy+
-
-↓
-
-Puzzle 4
-
-Medium
-
-↓
-
-Puzzle 5
-
-Medium+
-
-↓
-
-Puzzle 6
-
-Hard
-
-↓
-
-Puzzle 7
-
-Expert
-
-↓
-
-Puzzle 8+
-
-Master
+```text
+Puzzle 1: tutorial board, one target, no hazard
+Puzzle 2: two targets, no hazard
+Puzzle 3: two targets, simple hazard
+Puzzle 4: three targets, simple hazard
+Puzzle 5: three targets, multiple hazards
+Puzzle 6: denser layout with bounce opportunity
+Puzzle 7+: expert layouts with more planning
 ```
 
-The increase should feel natural.
+The curve should feel natural.
+
+Players should fail because their gesture plan did not work, not because the board used hidden rules.
 
 ---
 
-# 9. Future Mechanics Library
+## 9. Layout Archetypes
 
-These mechanics are intentionally excluded from Phase 1 but form the long-term content roadmap.
+Phase 1 can vary layouts without adding new puzzle types.
 
-## Season 2
+### Open Sweep
 
-Moving Targets
+Targets are spread across open space with few or no hazards.
 
----
+Skill:
 
-## Season 3
+- Drawing a broad repeated motion.
 
-Wind
+### Thread the Hazard
 
-Pushes line trajectory.
+Targets sit near a black hole.
 
----
+Skill:
 
-## Season 4
+- Designing a curve that repeats cleanly without grazing the hazard.
 
-Gravity Wells
+### Bounce Catch
 
-Objects influence path planning.
+One or more targets reward using top/bottom bounce.
 
----
+Skill:
 
-## Season 5
+- Predicting reflected motion.
 
-Teleporters
+### Cluster Split
 
-Line enters one portal.
+Targets are separated into small clusters.
 
-Exits another.
+Skill:
 
----
+- Creating a repeated motion that visits both clusters before escaping.
 
-## Season 6
+### Escape Pressure
 
-Mirrors
+Targets are placed so a line may leave horizontally before collecting all of them.
 
-Reflection-based routing.
+Skill:
 
----
+- Choosing a gesture with enough vertical movement, curve, or bounce.
 
-## Season 7
-
-One-way Gates
-
-Path planning constraints.
+These are layout archetypes, not separate mechanics.
 
 ---
 
-## Season 8
+## 10. Future Mechanics Library
 
-Fragile Zones
+Future mechanics must preserve the core rule: draw once, release, line repeats.
 
-Only one crossing allowed.
+Possible future additions:
 
----
+- Moving targets.
+- Moving hazards.
+- Gravity wells that bend the moving line.
+- Wind zones that offset movement.
+- Portals that relocate the moving line.
+- Mirrors that reflect trajectory.
+- Seasonal target or hazard variants.
 
-## Season 9
-
-Split Nodes
-
-One line activates multiple outcomes.
-
----
-
-## Season 10
-
-Rotating Worlds
-
-Entire puzzle rotates over time.
+Each mechanic must be tested in practice or events before entering ranked daily play.
 
 ---
 
-# 10. Live Operations Philosophy
+## 11. Live Operations Philosophy
 
-Daily Line should feel alive.
+Daily Line should feel alive because the daily seed creates fresh boards and competition.
 
-Not because developers manually create content.
+Live operations should not add chores.
 
-Because systems continuously create new experiences.
+Retention comes from:
+
+- New daily layouts.
+- Leaderboards.
+- Replays.
+- Community discussion.
+- Occasional carefully tested mechanics.
 
 ---
 
-# 11. Daily Event
+## 12. Daily Event
 
 Every UTC day:
 
-```
-New Seed
-
-↓
-
-New Puzzle Sequence
-
-↓
-
-Leaderboard Reset
-
-↓
-
-Community Competition
+```text
+New seed
+New puzzle sequence
+Leaderboard reset
+Community competition
+Top replays archived
 ```
 
 ---
 
-# 12. Weekly Event (Future)
+## 13. Weekly Event - Future
 
-Every Sunday:
+Every Sunday, run a Community Championship.
 
-Community Championship
+Possible rules:
 
-- Extended timer
-- Higher difficulty
-- Exclusive badge
+- Longer timer.
+- Harder generated sequence.
+- Separate leaderboard.
+- Archived winners.
 
----
-
-# 13. Monthly Seasons
-
-Each season introduces exactly one new mechanic.
-
-Example
-
-Season 1
-
-Geometry
+Weekly events must not replace the daily run as the primary mode.
 
 ---
 
-Season 2
+## 14. Seasons - Future
 
-Motion
+Each season may introduce one mechanic that modifies the living line or board interaction.
 
----
+Example sequence:
 
-Season 3
+- Season 1: Core targets and black holes.
+- Season 2: Moving targets.
+- Season 3: Wind fields.
+- Season 4: Gravity wells.
+- Season 5: Portals.
+- Season 6: Mirrors.
 
-Reflection
-
----
-
-Season 4
-
-Teleportation
-
-This prevents feature overload while keeping the game fresh.
+Season mechanics must be disabled by default until proven fair and server-validatable.
 
 ---
 
-# 14. Community Roadmap
+## 15. Community Content - Future
 
-Phase 2+
+Community submissions should begin as target/hazard layouts, not arbitrary game rules.
 
-Community-created puzzles.
+Players can submit:
 
-Players submit:
+- Target positions.
+- Hazard positions.
+- Optional title.
 
-- Puzzle layouts
-- Shape designs
-- Challenge ideas
+Validation must check:
 
-Top-rated submissions become official weekly challenges.
+- Geometry.
+- Mobile readability.
+- Solvability.
+- Abuse/moderation.
+- Deterministic replay compatibility.
 
-This aligns strongly with the hackathon's emphasis on user contributions and community-driven content.
+Recommended first version:
+
+- Manual curation only.
 
 ---
 
-# 15. Replay Ecosystem
+## 16. Replay Ecosystem
 
-Players should learn from others.
+Replays are core content.
 
 Replay categories:
 
-- Global #1
-- Friends
-- Most Elegant
-- Fastest Solve
-- Developer Pick (Future)
+- Global #1.
+- Current player's run.
+- Most elegant.
+- Fastest solve.
+- Developer pick in the future.
+
+Players should learn by watching how different gestures solve the same board.
 
 ---
 
-# 16. Leaderboard Categories
+## 17. Leaderboard Categories
 
-Phase 1
+Phase 1/2:
 
-- Daily Global
+- Daily global.
 
-Future
+Future:
 
-- Weekly
-- Monthly
-- Country
-- Friends
-- All-Time
-- Creator Rankings
-
----
-
-# 17. Cosmetic Roadmap
-
-No gameplay advantages.
-
-Unlockables include:
-
-- Line Colors
-- Trail Effects
-- Goal Animations
-- Success Effects
-- Profile Frames
-- Seasonal Themes
-
-Skill remains the only competitive differentiator.
+- Weekly.
+- Monthly.
+- Friends.
+- Country.
+- All-time.
 
 ---
 
-# 18. Achievement System (Future)
+## 18. Cosmetic Roadmap - Future
 
-Examples:
+Cosmetics must not affect gameplay.
+
+Possible cosmetic unlocks:
+
+- Line colors.
+- Trail effects.
+- Target pop effects.
+- Profile frames.
+- Seasonal themes.
+
+Competitive fairness is mandatory.
+
+---
+
+## 19. Achievement System - Future
+
+Potential achievements:
 
 - Solve 100 puzzles.
-- Reach Combo x10.
-- Finish Top 100.
+- Reach combo x10.
+- Finish top 100.
 - Maintain a 30-day streak.
-- Complete every daily challenge in a season.
+- Watch a top replay.
+
+Achievements must not become required chores.
 
 ---
 
-# 19. Community Progression (Future)
+## 20. Community Progression - Future
 
-Entire subreddit contributes.
+Subreddit progress may increase as users solve daily puzzles.
 
-```
-Daily Solves
+Example:
 
-↓
-
-Community Progress
-
-↓
-
-Unlock New World
-
-↓
-
-New Puzzle Theme
+```text
+Daily solves
+Community meter fills
+New visual theme unlocks
+Next weekly event changes
 ```
 
-Players feel they are building something together.
+This should be cosmetic or content-based only. It must not affect ranked fairness.
 
 ---
 
-# 20. Content Production Strategy
+## 21. Live Operations Tools
 
-Developers should **not** create thousands of levels.
+Needed tools:
 
-Instead:
-
-- Design mechanics.
-- Build templates.
-- Improve procedural generation.
-- Curate community content.
-
-This creates effectively infinite replayability while minimizing manual content production.
-
----
-
-# 21. Seasonal Content Calendar (Example)
-
-| Season | Theme      | New Mechanic         |
-| ------ | ---------- | -------------------- |
-| 1      | Geometry   | Core Line            |
-| 2      | Motion     | Moving Obstacles     |
-| 3      | Reflection | Mirrors              |
-| 4      | Wind       | Environmental Forces |
-| 5      | Gravity    | Attraction Fields    |
-| 6      | Portals    | Teleporters          |
-| 7      | Light      | Laser Gates          |
-| 8      | Time       | Timed Switches       |
+- Preview tomorrow's seed.
+- Force-disable bad seed.
+- Replace daily seed if a severe issue is found before launch.
+- View leaderboard anomalies.
+- View replay reports.
+- Archive daily winners.
+- Feature curated layouts.
 
 ---
 
-# 22. Feature Retirement Policy
+## 22. Moderation and Safety
 
-Not every experiment should remain forever.
+Community submissions need:
 
-Features may be retired if they:
+- Rate limits.
+- Report flow.
+- Admin review.
+- Rejection reasons.
+- Abuse prevention.
 
-- Reduce clarity.
-- Increase onboarding complexity.
-- Harm procedural generation.
-- Reduce fairness.
+Do not auto-publish user-generated layouts into ranked daily play until moderation is strong.
 
 ---
 
-# 23. Anti-Content Rules
+## 23. Anti-Content Rules
 
 Never add:
 
-❌ Loot boxes
-
-❌ Energy systems
-
-❌ Pay-to-win mechanics
-
-❌ Mandatory grinding
-
-❌ Artificial waiting
-
-❌ Daily chores unrelated to gameplay
-
-Retention should come from **anticipation**, not obligation.
+- Loot boxes.
+- Energy systems.
+- Pay-to-win mechanics.
+- Mandatory grinding.
+- Artificial waiting.
+- Mechanics that require long tutorials.
+- Generic start-to-goal path puzzles in the core mode.
 
 ---
 
-# 24. Long-Term Vision
+## 24. Long-Term Vision
 
-The long-term goal is to evolve Daily Line into a **daily competitive puzzle platform**, not simply a collection of levels.
+Daily Line should evolve into a daily competitive living-gesture puzzle game.
 
 Players should return because:
 
-- There is a new challenge.
-- They want to beat yesterday's score.
+- There is a new board.
+- They want to beat yesterday.
 - They want to study top replays.
-- The community is progressing together.
-- New mechanics arrive over time.
+- They want to design a better line.
+- The community is competing on the same daily seed.
 
-The content engine should scale through procedural generation, carefully designed mechanics, and eventually community-created challenges rather than an ever-growing library of handcrafted puzzles. Research on procedural content generation emphasizes that reusable mechanics and constrained generation are more scalable than manual content creation alone. :contentReference[oaicite:1]{index=1}
+The product can grow, but the identity must stay focused:
 
----
+> Draw once. Release. Watch it move.

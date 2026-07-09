@@ -3,6 +3,10 @@ export interface Point {
   y: number;
 }
 
+export function lerp(a: number, b: number, t: number): number {
+  return a + (b - a) * t;
+}
+
 /** Distance between two points */
 export function dist(p1: Point, p2: Point): number {
   const dx = p1.x - p2.x;
@@ -37,6 +41,40 @@ export function isPointInCircle(p: Point, center: Point, radius: number): boolea
   return dist(p, center) <= radius;
 }
 
+export function polylineLength(path: Point[]): number {
+  let total = 0;
+  for (let i = 1; i < path.length; i++) {
+    total += dist(path[i - 1] as Point, path[i] as Point);
+  }
+  return total;
+}
+
+export function smoothPath(path: Point[], iterations: number = 2): Point[] {
+  if (path.length < 3) return [...path];
+
+  let current = [...path];
+
+  for (let pass = 0; pass < iterations; pass++) {
+    const next: Point[] = [current[0] as Point];
+    for (let i = 0; i < current.length - 1; i++) {
+      const p0 = current[i] as Point;
+      const p1 = current[i + 1] as Point;
+      next.push({
+        x: lerp(p0.x, p1.x, 0.25),
+        y: lerp(p0.y, p1.y, 0.25),
+      });
+      next.push({
+        x: lerp(p0.x, p1.x, 0.75),
+        y: lerp(p0.y, p1.y, 0.75),
+      });
+    }
+    next.push(current[current.length - 1] as Point);
+    current = next;
+  }
+
+  return current;
+}
+
 /**
  * Normalizes a polyline into an array of points separated by exactly `step` distance.
  */
@@ -68,6 +106,10 @@ export function normalizePath(path: Point[], step: number): Point[] {
     }
   }
 
+  const lastPoint = path[path.length - 1] as Point;
+  if (dist(result[result.length - 1] as Point, lastPoint) > step * 0.5) {
+    result.push(lastPoint);
+  }
+
   return result;
 }
-

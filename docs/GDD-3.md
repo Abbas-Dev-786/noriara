@@ -1,357 +1,244 @@
-# Game Design Document (GDD)
+# Game Design Document
 
-# Part 3 — UX, Visual Design & Game Feel
-
----
+# Part 3 - UX, Visual Design & Game Feel
 
 # Project
 
-**Daily Line** _(Working Title)_
+**Daily Line** *(Working Title)*
 
-Version: 1.0
+Version:
+
+1.0
 
 Document:
+
 UX, Visual Design & Game Feel
 
 ---
 
-# 1. UX Philosophy
+## 1. UX Philosophy
 
-The entire UX should communicate one idea:
+The UX should communicate one idea:
 
-> **Open → Understand → Play**
+> Draw once. Release. Watch it move.
 
-No tutorials.
+No tutorial should be required. The board should teach itself:
 
-No onboarding.
+- Colored circles invite collection.
+- Black holes signal danger.
+- The player's drawn line visibly comes alive.
 
-No reading.
-
-The interface should disappear, leaving only the puzzle.
-
-The best mobile puzzle games achieve this by minimizing interface friction and making interaction itself the tutorial. Good game feel also depends on responsiveness, clarity, and streamlining rather than visual effects alone. :contentReference[oaicite:0]{index=0}
+The interface should disappear during play.
 
 ---
 
-# 2. UX Principles
-
-## Principle 1
+## 2. UX Principles
 
 ### Less UI
 
-Everything that isn't gameplay should be removed.
+Everything that is not gameplay should be removed from the run.
 
 Never ask:
 
 - Are you sure?
 - Continue?
 - Retry?
-- Exit?
-
-One tap.
-
-One action.
-
----
-
-## Principle 2
+- Confirm?
 
 ### Immediate Feedback
 
-Every interaction must receive feedback.
+Every interaction needs feedback:
 
-Draw
-
-↓
-
-Line appears instantly
-
-Correct
-
-↓
-
-Explosion
-
-Incorrect
-
-↓
-
-Snap Back
-
-Waiting kills flow.
-
----
-
-## Principle 3
+- Drawing shows the line instantly.
+- Release starts movement instantly.
+- Target collection pops.
+- Hazard failure destroys the line clearly.
 
 ### Zero Cognitive Load
 
-Player should never ask
+The player should never ask:
 
-"What do I press?"
+> "What do I press?"
 
-Instead they think
+They should ask:
 
-"How do I solve this?"
+> "What shape should I draw?"
 
 ---
 
-# 3. Information Hierarchy
+## 3. Gameplay Information Hierarchy
 
-During gameplay only these elements should be visible.
+During gameplay only these elements should be visible:
 
-```
-━━━━━━━━━━━━━━━━━━
-
-TIME
-
-SCORE
-
-━━━━━━━━━━━━━━━━━━
-
-Puzzle
-
-━━━━━━━━━━━━━━━━━━
-
+```text
+Timer
+Score
+Puzzle area
 Combo
-
-━━━━━━━━━━━━━━━━━━
 ```
 
-Nothing else.
+The playfield contains only:
+
+- Colored targets.
+- Black holes.
+- The player's line.
+
+No labels, instructions, start markers, or goal markers should appear inside Phase 1 puzzles.
 
 ---
 
-# 4. Screen Flow
+## 4. Screen Flow
 
-```
+```text
 Launch
-
-↓
-
 Loading
-
-↓
-
 Home
-
-↓
-
 Today's Challenge
-
-↓
-
 Countdown
-
-↓
-
 Gameplay
-
-↓
-
 Results
-
-↓
-
 Leaderboard
-
-↓
-
 Replay
-
-↓
-
 Home
 ```
 
-No extra screens.
+No extra screens are required for Phase 1.
 
 ---
 
-# 5. Home Screen
+## 5. Home Screen
 
-Purpose
+Purpose:
 
-Create excitement.
+- Let the player start today's run with minimal friction.
 
----
+Components:
 
-## Components
+- Logo.
+- Today's Challenge.
+- Current streak when available.
+- Play button.
+- Leaderboard button when available.
 
-- Logo
-- Today's Challenge
-- Current Streak
-- Play Button
-- Leaderboard Button
-
-Future
-
-- Community Progress
-- Weekly Event
+The home screen should not explain every rule. The first board should teach the interaction.
 
 ---
 
-## Layout
+## 6. Countdown Screen
 
-```
-━━━━━━━━━━━━━━━━━━
-
-Daily Line
-
-🔥 Streak 12
-
-━━━━━━━━━━━━━━━━━━
-
-Today's Challenge
-
-Play
-
-━━━━━━━━━━━━━━━━━━
-
-Leaderboard
-
-━━━━━━━━━━━━━━━━━━
-```
-
----
-
-# 6. Countdown Screen
-
-```
+```text
 3
-
-↓
-
 2
-
-↓
-
 1
-
-↓
-
 GO
 ```
 
-Duration
+Duration:
 
-3 seconds
+- 3 seconds.
 
-Background subtly zooms.
+Optional feedback:
 
-Pulse animation.
-
-Small vibration.
+- Subtle pulse.
+- Small haptic tick.
+- No blocking tutorial overlay.
 
 ---
 
-# 7. Gameplay Screen
+## 7. Gameplay Screen
 
-```
-━━━━━━━━━━━━━━━━━━
+Gameplay layout:
 
+```text
 00:28
-
 Score 480
 
-━━━━━━━━━━━━━━━━━━
-
-Puzzle Area
-
-━━━━━━━━━━━━━━━━━━
+[playfield]
 
 Combo x4
-
-━━━━━━━━━━━━━━━━━━
 ```
 
-Only essential information.
+The playfield should be visually calm so the moving line is easy to read.
 
 ---
 
-# 8. Results Screen
+## 8. Results Screen
 
-Appears instantly.
+Appears immediately when time expires.
 
-Shows
+Shows:
 
-- Final Score
-- Rank
-- Best Score
-- Puzzles Solved
-- Current Streak
+- Final score.
+- Puzzles solved.
+- Max combo.
+- Daily rank when available.
+- Personal best when available.
 
-Buttons
+Buttons:
 
-- Watch Replay
-- Leaderboard
-- Home
+- Watch Replay when available.
+- Leaderboard when available.
+- Home or Practice.
 
 ---
 
-# 9. Leaderboard Screen
+## 9. Leaderboard Screen
 
-Columns
+Columns:
 
-```
-#
-
+```text
+Rank
 Player
-
 Score
-
 Puzzles
 ```
 
-Highlight
+Highlight:
 
-Current Player
-
-Top 3
-
-Animated entry.
+- Current player.
+- Top 3.
+- Replay availability.
 
 ---
 
-# 10. Replay Screen
+## 10. Replay Screen
 
-Minimal UI.
+The replay screen should feel like watching the player think.
 
-Player line draws itself.
+Replay should show:
 
-Playback controls
+- Gesture drawing.
+- Release moment.
+- Living line movement.
+- Target collection.
+- Hazard failures.
+- Puzzle transitions.
 
-- Pause
-- Restart
-- Exit
+Controls:
 
-Nothing else.
+- Pause.
+- Restart.
+- Exit.
 
----
-
-# 11. Visual Language
-
-The game should feel
-
-Minimal
-
-Modern
-
-Elegant
-
-Premium
-
-Think
-
-Apple Design Award
-
-not
-
-Arcade Flash Game
+Keep UI minimal.
 
 ---
 
-# 12. Art Direction
+## 11. Visual Language
+
+The game should feel:
+
+- Minimal.
+- Modern.
+- Elegant.
+- Magical.
+- Premium.
+
+The key visual identity is the moving line, not decorative UI.
+
+---
+
+## 12. Art Direction
 
 Flat geometric style.
 
@@ -359,261 +246,172 @@ High contrast.
 
 No unnecessary textures.
 
-Focus on
+Focus on:
 
-Shapes
+- Shapes.
+- Motion.
+- Color.
+- Light.
+- Smooth line rendering.
 
-Motion
+Inspirations:
 
-Color
+- Blek.
+- Monument Valley.
+- Alto's Odyssey.
+- Klocki.
+- Euclidean Lands.
 
-Light
-
----
-
-## Inspiration
-
-- Blek
-- Monument Valley
-- Alto's Odyssey
-- Klocki
-- Euclidean Lands
-
-Not for imitation—but for clarity, restraint, and polish.
+These are references for clarity and polish, not for feature copying.
 
 ---
 
-# 13. Color Palette
+## 13. Color and Shape Language
 
-## Background
+Background:
 
-Dark charcoal
+- Dark charcoal or clean neutral.
 
----
+Player line:
 
-## Primary
+- White or high-contrast primary color.
 
-White
+Targets:
 
----
+- Bright colored circles.
+- Soft glow or ring.
+- Pop/fade on collection.
 
-## Accent
+Hazards:
 
-Electric Blue
+- Black circles.
+- Strong outline or gravity-like visual treatment.
+- Suck-in failure effect.
 
----
+Accessibility:
 
-## Success
-
-Green
-
----
-
-## Failure
-
-Red
+- Do not rely on color alone.
+- Targets and hazards should differ by value, outline, animation, and behavior.
 
 ---
 
-## Combo
+## 14. Typography
 
-Orange
+Use one readable font family.
 
----
+Timer and score should be highly legible.
 
-Accessibility note
-
-Never rely on color alone.
-
-Use
-
-Animation
-
-Scale
-
-Icons
-
-Sound
-
-Accessibility guidance consistently recommends combining color with additional cues and offering high-contrast options for players with visual impairments. :contentReference[oaicite:1]{index=1}
+Text should not compete with the playfield.
 
 ---
 
-# 14. Typography
+## 15. Animation Principles
 
-One font.
+Every animation must communicate state:
 
-Bold.
+- Drawing.
+- Release.
+- Movement.
+- Collection.
+- Failure.
+- Success.
+- Time pressure.
 
-Rounded.
-
-Easy to read.
-
-Numbers should be highly legible.
-
-Timer always largest.
-
----
-
-# 15. Animation Principles
-
-Every animation must have purpose.
-
-Animations should communicate
-
-- Success
-- Failure
-- Importance
-- Focus
-
-Never animate for decoration.
+Do not animate for decoration during the active run.
 
 ---
 
-# 16. Motion Design
-
-Puzzle Transition
-
-200 ms
-
-Fade
-
-Scale
-
-New puzzle appears.
-
----
-
-Score Popup
-
-Float upward.
-
-Fade.
-
-150 ms.
-
----
-
-Combo
-
-Pulse.
-
-Glow.
-
-Scale.
-
----
-
-Leaderboard Entry
-
-Slide.
-
-Fade.
-
-Stagger.
-
----
-
-# 17. Drawing Feel
+## 16. Drawing Feel
 
 This is the most important interaction.
 
-The line should feel
+Requirements:
 
-- Immediate
-- Smooth
-- Stable
-- Precise
+- The drawn line appears under the pointer immediately.
+- The line uses rounded caps and joins.
+- Raw input is smoothed enough to look fluid.
+- Smoothing must not make the line feel detached from the finger.
+- The release-to-movement transition should be instant.
 
-No visible latency.
-
-If the drawing feels wrong,
-
-the entire game feels wrong.
-
-Game feel research consistently identifies responsive input and immediate system response as foundational to player satisfaction. :contentReference[oaicite:2]{index=2}
+If drawing feels wrong, the game feels wrong.
 
 ---
 
-# 18. Line Rendering
+## 17. Living Line Feel
 
-Properties
+The line should feel like the player's drawing has become alive.
 
-Rounded Caps
+Requirements:
 
-Rounded Joins
+- Movement follows the captured gesture pattern.
+- Speed is steady and readable.
+- The body keeps the original gesture length.
+- The tail follows the head's traveled path.
+- Repeated motion feels continuous.
+- Bounces are visually understandable.
 
-Anti-aliased
-
-Subpixel Rendering
-
-Consistent Width
-
-The line itself becomes part of the game's identity.
-
----
-
-# 19. Success Feedback ("Juice")
-
-Correct solve triggers
-
-✓ Flash
-
-✓ Pop
-
-✓ Tiny Camera Pulse
-
-✓ Score Popup
-
-✓ Success Sound
-
-✓ Next Puzzle
-
-All within 300 ms.
-
-Polish ("juice") amplifies important events and reinforces player actions without interrupting flow. :contentReference[oaicite:3]{index=3}
+The player should be able to learn by watching the line move.
 
 ---
 
-# 20. Failure Feedback
+## 18. Line Rendering
 
-Failure should feel
+Properties:
 
-Immediate
+- Rounded caps.
+- Rounded joins.
+- Anti-aliased where possible.
+- Consistent width.
+- Stable body length.
+- No jagged point-to-point artifacts.
 
-Clear
+The line itself is part of the brand identity.
 
-Forgiving
+---
 
-Sequence
+## 19. Success Feedback
 
-```
-Wrong Line
+Success triggers:
 
-↓
+- Final target pop.
+- Bright but brief flash.
+- Score popup.
+- Combo pulse.
+- New puzzle within 300 ms.
 
-Soft Shake
+The transition must not interrupt flow.
 
-↓
+---
 
-Red Flash
+## 20. Failure Feedback
 
-↓
+Failure should feel immediate and explain why it happened.
 
-Reset
+Black-hole collision:
 
-↓
-
-Try Again
+```text
+Line touches black hole
+Collision point is visible
+Line collapses or gets pulled in
+Current puzzle resets
+Player draws again
 ```
 
-Duration
+Horizontal escape:
 
-<400 ms
+```text
+Line fully leaves screen
+Targets remain
+Line disappears
+Current puzzle resets
+Player draws again
+```
+
+Total failure feedback should complete quickly.
 
 ---
 
-# 21. Audio Direction
+## 21. Audio Direction
 
 Minimal.
 
@@ -621,245 +419,132 @@ Clean.
 
 Pleasant.
 
-No looping music during gameplay.
+No intense looping music during gameplay.
 
-Only ambient pad.
+Sound effects:
 
-The game should feel
+- Countdown tick.
+- Soft draw sound only if it does not annoy.
+- Target pop.
+- Failure collapse.
+- Time-up bell.
 
-Focused.
-
----
-
-# 22. Sound Effects
-
-Draw
-
-Tiny scratch
-
-Success
-
-Bright chime
-
-Failure
-
-Soft click
-
-Countdown
-
-Deep tick
-
-Time Up
-
-Bell
-
-Leaderboard
-
-Subtle sparkle
-
-Avoid repetitive or harsh sounds.
+All audio respects sound settings.
 
 ---
 
-# 23. Haptics (Mobile)
+## 22. Haptics
 
-Tiny vibration
+Use haptics sparingly:
 
-Success
+- Micro pulse on countdown.
+- Short pulse on final target collection.
+- Soft bump on failure.
 
-Short pulse
-
-Failure
-
-Soft bump
-
-Countdown
-
-Micro pulse
-
-Never overuse haptics.
+All haptics respect haptic settings.
 
 ---
 
-# 24. Mobile UX
+## 23. Mobile UX
 
-Everything reachable
+The game is mobile first.
 
-with one thumb.
+Requirements:
 
-Important controls
-
-Bottom half.
-
-No tiny buttons.
-
-Touch targets
-
-≥44 px.
+- Large playfield.
+- No keyboard requirement.
+- No tiny UI controls.
+- Touch input should not scroll the page during play.
+- Expanded mode should be requested for the run when supported.
 
 ---
 
-# 25. Performance Goals
+## 24. Performance Goals
 
-Target
+Target:
 
-60 FPS
+- 60 FPS.
 
-Input Latency
+Input latency:
 
-<16 ms
+- Under 16 ms.
 
-Frame Drops
+Frame drops:
 
-Never during drawing.
+- Never during drawing or line locomotion.
 
-Visual smoothness directly influences perceived game quality and responsiveness. :contentReference[oaicite:4]{index=4}
-
----
-
-# 26. Accessibility
-
-Support
-
-✓ High Contrast Mode
-
-✓ Colorblind-safe palette
-
-✓ Reduced Motion
-
-✓ Haptic Toggle
-
-✓ Sound Toggle
-
-✓ Large UI Scaling
-
-Accessibility should be considered from the start rather than retrofitted later. :contentReference[oaicite:5]{index=5}
+Collision and rendering should be optimized around the moving line body.
 
 ---
 
-# 27. Emotional Curve
+## 25. Accessibility
 
-```
+Support:
+
+- High contrast mode.
+- Colorblind-safe palette.
+- Reduced motion.
+- Sound toggle.
+- Haptic toggle.
+- Large UI scaling where feasible.
+
+Reduced motion should keep gameplay readable while reducing nonessential pulses, flashes, and shakes.
+
+---
+
+## 26. Emotional Curve
+
+```text
 Curiosity
-
-↓
-
-Confidence
-
-↓
-
-Speed
-
-↓
-
+Experiment
+Watch
+Learn
+Improve
 Pressure
-
-↓
-
-Victory
-
-↓
-
-Comparison
-
-↓
-
-Motivation
+Compare
+Return
 ```
 
-Every session should follow this rhythm.
+Every session should reinforce this rhythm.
 
 ---
 
-# 28. Visual Identity
+## 27. Visual Identity
 
-If someone sees one screenshot,
+If someone sees one screenshot or replay, they should recognize Daily Line from:
 
-they should instantly recognize
-
-Daily Line.
-
-The visual identity should come from
-
-- elegant geometry,
-- distinctive line rendering,
-- restrained color use,
-- and confident motion.
+- The living gesture line.
+- Colored targets.
+- Black holes.
+- Restrained geometry.
+- Clear motion.
 
 ---
 
-# 29. UX Anti-Patterns
+## 28. UX Anti-Patterns
 
-Never include
+Never include:
 
-❌ Pop-up tutorials
-
-❌ Forced registration
-
-❌ Loading between puzzles
-
-❌ Reward videos
-
-❌ Cluttered HUD
-
-❌ Decorative animations that delay gameplay
-
-❌ Hidden gestures
+- Pop-up tutorials.
+- Start/goal labels inside Phase 1 puzzles.
+- Forced registration before practice.
+- Loading between puzzles.
+- Reward videos.
+- Cluttered HUD.
+- Decorative animations that delay gameplay.
+- Hidden gestures.
 
 ---
 
-# 30. UX Success Criteria
+## 29. UX Success Criteria
 
 A first-time player should be able to:
 
-- Understand the goal within 5 seconds.
-- Start playing without instructions.
+- Understand colored targets and black holes within 5 seconds.
+- Draw and release without instruction.
+- See the line come alive.
+- Understand why the line succeeded or failed.
 - Complete at least one puzzle in the first session.
-- Finish an entire run in under one minute.
-- Immediately understand why they succeeded or failed.
-- Want to compare their score with other players.
+- Want to compare their score with others.
 
 If those goals are met, the UX has achieved its purpose.
-
----
-
-# Deliverables for the Art & UX Team
-
-## Visual Assets
-
-- Logo
-- App Icon
-- Home Screen
-- Gameplay HUD
-- Results Screen
-- Leaderboard
-- Replay Screen
-- Countdown Animation
-- Success Animation
-- Failure Animation
-- Combo Animation
-- Line Rendering Styles
-
-## Audio Assets
-
-- Countdown SFX
-- Draw SFX
-- Success SFX
-- Failure SFX
-- Timer End SFX
-- UI Clicks
-- Ambient Loop
-
-## Motion Assets
-
-- Puzzle Transition
-- Score Popups
-- Combo Pulse
-- Camera Pulse
-- Screen Shake
-- Leaderboard Reveal
-- Replay Playback
-
-These assets, combined with the gameplay systems from Parts 1 and 2, should make the MVP feel polished enough to resemble a launch-ready product rather than a typical hackathon prototype.
-
----

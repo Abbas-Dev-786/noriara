@@ -1,779 +1,564 @@
-# Game Design Document (GDD)
+# Game Design Document
 
-# Part 1 — Vision & Core Gameplay
-
----
+# Part 1 - Vision & Core Gameplay
 
 # Project
 
-**Daily Line** _(Working Title)_
+**Daily Line** *(Working Title)*
 
 Genre:
-Daily Competitive Puzzle
+
+Daily Competitive Gesture Puzzle
 
 Platform:
+
 Reddit Devvit Web
 
 Engine:
-Phaser 3
 
-Document Version:
-1.0
+Phaser
 
 Status:
+
 Draft
 
 ---
 
-# 1. Game Vision
+## 1. Game Vision
 
-Daily Line is a competitive puzzle game built around a single elegant mechanic:
+Daily Line is a competitive puzzle game built around one magical mechanic:
 
-> Draw one continuous line to solve increasingly difficult puzzles before time runs out.
+> Draw a single gesture, release it, and watch the line come alive.
 
-Unlike traditional puzzle games, Daily Line is designed as a **daily sport** rather than a campaign.
+The player shapes a continuous line. When they lift their finger, that line starts moving. It repeats the player's exact motion pattern, slithering across the board while keeping its original length.
 
-Every player receives the exact same challenge every day.
+The objective is always simple:
 
-The objective is not merely to finish the puzzles—it is to solve more puzzles than everyone else within 30 seconds.
+> Collect every colored circle. Avoid every black hole.
 
-The game should feel:
-
-- Instant
-- Elegant
-- Competitive
-- Satisfying
-- Replayable
-- Social
-
-A GDD is intended to be a living document that communicates gameplay, mechanics, UX, art, controls, and other implementation details to the entire development team. :contentReference[oaicite:0]{index=0}
+Daily Line is designed as a daily sport rather than a campaign. Every player receives the same seeded puzzle sequence each UTC day. The objective is not just to solve puzzles, but to solve more of them than everyone else in 30 seconds.
 
 ---
 
-# 2. Design Philosophy
+## 2. Design Philosophy
 
 The game follows one philosophy:
 
-> **One mechanic.
-> Infinite mastery.**
+> One gesture. Infinite personality.
 
 No unnecessary systems.
 
-No dialogue.
+No start-to-goal route puzzles in the MVP.
 
 No inventory.
 
 No RPG mechanics.
 
-No unnecessary menus.
+No text-heavy tutorials.
 
-The mechanic itself should carry the experience.
-
----
-
-## Design Goals
-
-### Learn in 5 seconds
-
-A player opening Reddit for the first time should understand the game without reading instructions.
+The living line itself carries the experience.
 
 ---
 
-### Finish in 30 seconds
+## 3. Design Goals
 
-A complete session should comfortably fit inside a Reddit browsing session.
+### Learn in 5 Seconds
 
----
+Players should understand the board by sight:
 
-### Return tomorrow
+- Colored circles are good.
+- Black holes are bad.
+- Draw a shape and release.
 
-Players should think
+### Finish in 30 Seconds
 
-"I wonder what today's challenge is."
+A complete session should fit inside Reddit browsing behavior.
 
----
+### Return Tomorrow
+
+Players should think:
+
+> "I wonder what today's board is."
 
 ### Mastery
 
-A beginner solves
+A beginner draws simple lines.
 
-3 puzzles.
+An expert draws expressive motion patterns.
 
-An expert solves
-
-12.
-
-A professional solves
-
-20.
-
-Everyone plays the same game.
-
----
+A top player finds surprising, elegant solutions.
 
 ### Spectatorship
 
-Watching another player's replay should be entertaining.
-
-Players should immediately understand why someone performed better.
+Watching another player's replay should be entertaining because every gesture has a visible personality.
 
 ---
 
-# 3. Core Experience
+## 4. Core Experience
 
 The emotional journey should be:
 
-```
+```text
 Curiosity
-
-↓
-
 Confidence
-
-↓
-
+Experimentation
 Flow
-
-↓
-
 Pressure
-
-↓
-
-Victory
-
-↓
-
-Competition
-
-↓
-
-Curiosity for Tomorrow
+Success
+Comparison
+Curiosity for tomorrow
 ```
 
 ---
 
-# 4. Design Pillars
-
-## Pillar 1
+## 5. Design Pillars
 
 ### Elegant
 
-One mechanic.
+Only one required player action: draw one continuous gesture.
 
-No unnecessary complexity.
+### Magical
 
-Everything exists to support drawing.
-
----
-
-## Pillar 2
+The line comes alive after release and keeps moving.
 
 ### Fair
 
-Everyone receives
-
-the exact same challenge.
-
-Skill determines the winner.
-
----
-
-## Pillar 3
+Everyone receives the same daily sequence.
 
 ### Competitive
 
-Every puzzle solved matters.
-
-Every second matters.
-
----
-
-## Pillar 4
-
-### Fluid
-
-Drawing should feel
-
-smooth
-
-responsive
-
-predictable
-
-beautiful
-
----
-
-## Pillar 5
+Every solve and every second matters.
 
 ### Replayable
 
-The challenge changes every day.
-
-Not every hour.
-
-Daily anticipation is the retention mechanic.
+The same board can have many solutions, from simple to complex.
 
 ---
 
-# 5. Player Fantasy
+## 6. Player Fantasy
 
-The player fantasy is **not**:
+The player fantasy is not:
 
-"I am saving the world."
+> "I found the one correct route."
 
-The fantasy is
+The fantasy is:
 
-> **I am becoming incredibly precise.**
+> "I created a line that solved it."
 
-The player should slowly transform from
+The player should evolve from:
 
+```text
 random drawing
-
-↓
-
-intentional drawing
-
-↓
-
-optimized drawing
-
-↓
-
-expert-level precision
-
----
-
-# 6. Target Emotions
-
-Primary
-
-- Curiosity
-- Satisfaction
-- Focus
-- Competition
-
-Secondary
-
-- Surprise
-- Mastery
-- Pride
-
-Never
-
-- Confusion
-- Frustration
-- Waiting
-- Grinding
-
----
-
-# 7. Session Length
-
-Average
-
-30–45 seconds
-
-Maximum
-
-2 minutes
-
-Reason
-
-This game should naturally fit Reddit's feed consumption behavior.
-
----
-
-# 8. Gameplay Loop
-
+intentional motion
+planned repetition
+elegant solution design
+expert precision
 ```
+
+---
+
+## 7. Target Emotions
+
+Primary:
+
+- Curiosity.
+- Satisfaction.
+- Focus.
+- Competition.
+- Delight.
+
+Secondary:
+
+- Surprise.
+- Mastery.
+- Pride.
+
+Never:
+
+- Confusion.
+- Waiting.
+- Arbitrary failure.
+- Pixel-perfect frustration.
+
+---
+
+## 8. Session Length
+
+Average:
+
+- 30-45 seconds.
+
+Maximum:
+
+- About 2 minutes including results and leaderboard.
+
+Reason:
+
+- The game should naturally fit Reddit's feed consumption behavior.
+
+---
+
+## 9. Gameplay Loop
+
+```text
 Open Reddit
-
-↓
-
 Open Daily Line
-
-↓
-
 Countdown
-
-↓
-
-Solve Puzzle
-
-↓
-
-Instant Success Feedback
-
-↓
-
-Next Puzzle
-
-↓
-
-Difficulty Increases
-
-↓
-
-Repeat
-
-↓
-
-Timer Ends
-
-↓
-
+Puzzle appears
+Draw one gesture
+Release
+Line comes alive
+Collect targets or fail
+Next puzzle or immediate retry
+Repeat until timer ends
 Results
-
-↓
-
 Leaderboard
-
-↓
-
 Replay
-
-↓
-
-Leave
-
-↓
-
-Return Tomorrow
+Return tomorrow
 ```
 
 ---
 
-# 9. Core Mechanic
+## 10. Core Mechanic
 
-Everything in the game revolves around one action:
+Everything revolves around one action:
 
-**Draw a single continuous line.**
+> Draw a single continuous gesture.
 
 The player may:
 
-- Start anywhere allowed
-- Continue without lifting
-- Cross existing lines (when permitted)
-- Finish after satisfying the puzzle conditions
+- Start drawing anywhere in the allowed play area.
+- Drag without lifting.
+- Draw curves, loops, hooks, waves, or straight lines.
+- Release to activate the line.
 
 The player may not:
 
-- Teleport
-- Erase
-- Lift and redraw
-- Use multiple strokes
+- Draw multiple strokes for one attempt.
+- Edit the gesture after release.
+- Pause the line after release.
+- Control the line directly after release.
 
 ---
 
-# 10. Controls
+## 11. Gesture Capture
 
-## Mobile
+When the player touches or clicks:
 
-Finger
+- Start recording an ordered point array.
+- Each pointer movement appends a 2D coordinate.
+- Points are resampled or smoothed to produce stable motion.
+- The visible line follows the pointer immediately.
 
-↓
+When the player releases:
 
-Touch
-
-↓
-
-Drag
-
-↓
-
-Release
+- Drawing ends.
+- Locomotion begins instantly.
+- The original gesture length becomes the permanent body length of the moving line for that attempt.
+- The player cannot add new points until the attempt succeeds or fails.
 
 ---
 
-## Desktop
+## 12. Locomotion
 
-Mouse
+After release, the line keeps moving by repeating its own motion.
 
-↓
+Technical rule:
 
-Click
+- Convert the smoothed gesture into a sequence of displacement vectors.
+- Move the line head through that displacement sequence at constant speed.
+- When the sequence ends, repeat it again from the current head position.
+- The repeated copies snap end-to-start, creating an infinite path.
+- Render only the trailing body segment equal to the original gesture length.
+- The tail follows the exact path already traveled by the head.
 
-↓
+This is the most important game algorithm.
 
-Drag
-
-↓
-
-Release
-
----
-
-No buttons are required during gameplay.
+If this does not feel magical, the game does not work.
 
 ---
 
-# 11. Puzzle Grammar
+## 13. Puzzle Entities
 
-Every puzzle consists of:
+Phase 1 has only two active board entities.
 
-## Start Point
+### Colored Circles
 
-Where drawing begins.
+Purpose:
 
----
+- Targets.
 
-## Goal
+Interaction:
 
-The puzzle objective.
+- Any part of the moving line touching a colored circle collects it.
+- Collected circles disappear with a soft pop or fade.
+- Collecting the final colored circle wins the puzzle.
 
-Examples:
+### Black Holes
 
-Reach destination.
+Purpose:
 
-Cover area.
+- Hazards.
 
-Connect nodes.
+Interaction:
 
-Avoid obstacles.
-
-Trigger switches.
-
----
-
-## Constraints
-
-Rules.
-
-Examples
-
-- One stroke
-- Don't touch walls
-- Pass through checkpoints
-- Stay inside area
+- Any part of the moving line touching a black hole fails the attempt.
+- The line should be destroyed with a clear black-hole/suck-in effect.
+- The same puzzle resets immediately for another draw.
 
 ---
 
-## Feedback
+## 14. Collision Rules
 
-Immediate.
+Collision must check the whole moving line body.
 
-Correct
+It is not enough to check only the head.
 
-↓
+Implementation can use:
 
-Success animation
+- Segment-to-circle checks across the rendered body.
+- A chain of small colliders.
+- An edge collider equivalent.
 
-Incorrect
+If the tail grazes a black hole, the attempt fails.
 
-↓
-
-Reset animation
-
----
-
-# 12. Difficulty Philosophy
-
-Difficulty should come from
-
-thinking
-
-not
-
-precision.
-
-Bad difficulty
-
-Tiny hitboxes
-
-Microscopic gaps
-
-Invisible objects
-
-Good difficulty
-
-Planning
-
-Timing
-
-Geometry
-
-Path optimization
+If any body segment touches a colored circle, that target is collected.
 
 ---
 
-# 13. Difficulty Curve
+## 15. Boundary Rules
 
-```
-Puzzle 1
+Top and bottom:
 
-Tutorial
+- Act as reflective boundaries.
+- The line bounces by reflecting vertical movement.
+- The repeated motion continues after reflection.
 
-↓
+Left and right:
 
-Puzzle 2
+- Act as escape boundaries.
+- If the whole line leaves left or right while targets remain, the attempt fails.
+- If all targets were collected first, the puzzle has already succeeded.
 
-Very Easy
+---
 
-↓
+## 16. Win and Loss
 
-Puzzle 3
+Win:
 
-Easy
+- The line collects the final colored circle.
+- Success feedback plays.
+- Score updates.
+- The next puzzle appears immediately.
 
-↓
+Loss:
 
-Puzzle 4
+- The line touches a black hole.
+- Or the entire line leaves horizontally before all targets are collected.
+- The line disappears.
+- Combo resets.
+- The current puzzle remains.
+- The player draws again.
 
-Easy+
+Failure costs time, not progress.
 
-↓
+---
 
-Puzzle 5
+## 17. Difficulty Philosophy
 
-Medium
+Difficulty should come from:
 
-↓
+- Planning a gesture whose repeated motion reaches all targets.
+- Avoiding hazards across the whole body.
+- Understanding bounce behavior.
+- Seeing how a drawn motion will continue.
 
-Puzzle 6
+Difficulty should not come from:
 
-Medium+
+- Tiny hitboxes.
+- Hidden rules.
+- Reading instructions.
+- Start/goal constraints.
+- Pixel-perfect gaps.
 
-↓
+---
 
-Puzzle 7
+## 18. Difficulty Curve
 
-Hard
-
-↓
-
-Puzzle 8
-
-Hard+
-
-↓
-
-Puzzle 9+
-
-Expert
+```text
+Puzzle 1: one target, no hazard
+Puzzle 2: two targets, no hazard
+Puzzle 3: two targets, one simple hazard
+Puzzle 4: three targets, one hazard
+Puzzle 5: three targets, two hazards
+Puzzle 6+: more planning, denser but fair layouts
 ```
 
-Players naturally discover their skill ceiling.
+The first puzzle should teach by interaction, not text.
 
 ---
 
-# 14. Failure Philosophy
+## 19. Failure Philosophy
 
-Failure should cost
+Failure should feel immediate, readable, and fair.
 
-time
+Bad failure:
 
-not
+- The player cannot tell what happened.
+- The hazard collision feels early or late.
+- The line behaves differently than expected.
 
-progress.
+Good failure:
 
-Incorrect line
-
-↓
-
-Immediate reset
-
-↓
-
-Player instantly tries again
-
-No lives.
-
-No penalties.
-
-No waiting.
+- The collision point is obvious.
+- The line destruction explains the mistake.
+- The player can redraw instantly.
 
 ---
 
-# 15. Success Feedback
+## 20. Success Feedback
 
 Every solved puzzle should feel rewarding.
 
 Success includes:
 
-✓ Bright flash
+- Bright flash.
+- Target pop.
+- Score popup.
+- Combo pulse.
+- Immediate next puzzle.
 
-✓ Success sound
-
-✓ Camera pulse
-
-✓ Score popup
-
-✓ Combo increase
-
-✓ Immediate next puzzle
-
-No delays longer than 300 ms.
+No success delay should exceed 300 ms.
 
 ---
 
-# 16. Flow State
+## 21. Flow State
 
-The ideal player enters this loop:
+The ideal player loop:
 
-```
-Think
-
-↓
-
+```text
+Look
+Imagine motion
 Draw
-
-↓
-
-Success
-
-↓
-
-Next
-
-↓
-
-Think
-
-↓
-
-Draw
-
-↓
-
-Success
-
-↓
-
-Next
+Release
+Watch
+Learn
+Succeed or redraw
 ```
 
 No loading.
 
-No interruptions.
-
 No menus.
+
+No interruption during the run.
 
 ---
 
-# 17. Input Feel
+## 22. Input Feel
 
-The drawing system should feel:
+The drawing system must feel:
 
-- Smooth
-- Immediate
-- Precise
-- Predictable
-- Low latency
+- Smooth.
+- Immediate.
+- Precise.
+- Predictable.
+- Low latency.
 
 Players should trust the line.
 
-If they fail,
-
-they should blame themselves,
-
-not the controls.
-
-Game feel—including responsiveness, clear feedback, and the "polish" of interactions—is widely recognized as a major factor in how satisfying games feel to play. :contentReference[oaicite:1]{index=1}
+If they fail, they should understand it was their motion pattern, not a control problem.
 
 ---
 
-# 18. Visual Clarity
+## 23. Visual Clarity
 
 At any moment the player should instantly identify:
 
-- Current puzzle
-- Allowed drawing area
-- Start
-- Goal
-- Obstacles
-- Remaining time
-- Current score
+- Colored targets.
+- Black holes.
+- The moving line.
+- Remaining time.
+- Current score.
+- Combo.
 
 Nothing else should compete for attention.
 
 ---
 
-# 19. UX Principles
+## 24. UX Principles
 
 Remove everything unnecessary.
 
 No:
 
-- Popups
-- Dialogs
-- Ads
-- Long tutorials
-- Confirmation screens
-- Settings during gameplay
-
-Everything should be one tap away.
+- Pop-up tutorials.
+- Confirmation screens.
+- Settings during gameplay.
+- Text explanations inside the playfield.
+- Extra puzzle entities in Phase 1.
 
 ---
 
-# 20. Accessibility
+## 25. Accessibility
 
 Support:
 
-- Colorblind-safe palette
-- Large touch targets
-- High contrast mode
-- Reduced motion mode
-- Haptic feedback (mobile)
+- Colorblind-safe target and hazard styling.
+- High contrast mode.
+- Large touch targets.
+- Reduced motion option.
+- Haptic toggle where supported.
+- Sound toggle.
+
+Do not rely on color alone. Colored targets and black holes should also differ by shape treatment, animation, glow, or outline.
 
 ---
 
-# 21. Design Rules
+## 26. Design Rules
 
 Every new mechanic must satisfy:
 
-✓ Learnable in under 10 seconds
+- Compatible with living gesture locomotion.
+- Learnable without text.
+- Understandable in under 10 seconds.
+- Works on touch.
+- Works inside a 30-second run.
+- Supports deterministic replay.
+- Supports server validation.
 
-✓ Explainable without text
-
-✓ Compatible with touch
-
-✓ Works in under 30 seconds
-
-✓ Supports procedural generation
-
-✓ Scales in difficulty
-
-If a mechanic fails any of these checks, it should not be added to Phase 1.
+If a mechanic would turn the game into generic path drawing, it should not enter Phase 1.
 
 ---
 
-# 22. Anti-Goals
+## 27. Anti-Goals
 
 The game should never become:
 
-❌ A story game
+- A start-to-goal path puzzle collection.
+- A story game.
+- A level campaign.
+- An RPG.
+- A grind for XP.
+- A collectible economy.
+- A cluttered arcade game.
 
-❌ A level-based campaign
+The identity of Daily Line comes from:
 
-❌ An RPG
-
-❌ A grind for XP
-
-❌ A collectible economy
-
-❌ A clone of another puzzle game
-
-The identity of Daily Line should come from the combination of:
-
-- daily competition,
-- elegant single-stroke puzzles,
-- and mastery through repetition.
+- Daily competition.
+- Living gesture lines.
+- Colored targets and black holes.
+- Mastery through expressive repetition.
 
 ---
 
-# 23. Definition of Great Gameplay
+## 28. Definition of Great Gameplay
 
 A great Daily Line session ends with one of these thoughts:
 
-> "I almost solved one more."
+> "I almost made the perfect line."
 
-> "How did the #1 player do that?"
+> "How did the #1 player draw that?"
 
-> "Tomorrow I'll beat my score."
+> "Tomorrow I'll make a better shape."
 
-Those three reactions are the emotional north star for every design decision in the game.
-
----
-
+Those reactions are the emotional north star for every design decision.

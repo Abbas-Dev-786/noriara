@@ -8,7 +8,7 @@ This phase ends when the app supports community-influenced content, scheduled ev
 
 ## Why This Phase Exists
 
-The full product vision includes community progression, submitted puzzles, weekly events, and seasonal mechanics. These systems should be added only after the daily core loop works.
+The full product vision includes community progression, submitted target/hazard layouts, weekly events, and seasonal mechanics. These systems should be added only after the daily core loop works.
 
 ## Scope
 
@@ -16,8 +16,8 @@ The full product vision includes community progression, submitted puzzles, weekl
 
 - Weekly event mode.
 - Monthly or seasonal mechanic framework.
-- Community puzzle submission prototype.
-- Puzzle moderation workflow.
+- Community target/hazard layout submission prototype.
+- Layout moderation workflow.
 - Community voting or curation.
 - Archived leaderboards.
 - Live operations calendar.
@@ -39,7 +39,7 @@ Every Sunday, run a Community Championship.
 
 Rules:
 
-- Longer timer or harder puzzle sequence.
+- Longer timer or harder living-line puzzle sequence.
 - Separate leaderboard.
 - Archive top scores.
 - Optional badge or profile stat.
@@ -60,23 +60,25 @@ Example sequence:
 
 Season mechanics must remain optional in the generator until proven fair.
 
-## Community Puzzle System
+## Community Layout System
 
 ### Submission
 
 Players can submit:
 
-- Puzzle layout.
+- Target positions.
+- Hazard positions.
 - Title.
 - Optional note.
 
 ### Validation
 
-Submitted puzzles must pass:
+Submitted layouts must pass:
 
 - Geometry validation.
 - Solvability validation.
 - Mobile readability validation.
+- Living-line compatibility validation.
 - Abuse/moderation checks.
 
 ### Curation
@@ -119,7 +121,7 @@ Needed tools:
 - View leaderboard anomalies.
 - View replay reports.
 - Archive daily winners.
-- Feature curated puzzle.
+- Feature curated layout.
 
 ## Moderation and Safety
 
@@ -156,9 +158,9 @@ Do not allow user-generated content to become required for the main daily challe
 
 ### 4. Community Submission Prototype
 
-- Add puzzle editor or simple submission format.
+- Add layout editor or simple submission format.
 - Add server validation.
-- Store submitted puzzles.
+- Store submitted layouts.
 - Add admin approval state.
 
 ### 5. Voting or Curation
@@ -181,7 +183,7 @@ Daily challenge
 Archived results
 Weekly event
 Season config
-Community puzzle submissions
+Community layout submissions
 Manual curation
 Live ops seed preview
 ```
@@ -191,9 +193,9 @@ Live ops seed preview
 - [ ] Archived leaderboard can be viewed.
 - [ ] Weekly event can run separately from daily run.
 - [ ] Season config can enable/disable a mechanic.
-- [ ] Community puzzle can be submitted.
-- [ ] Invalid community puzzle is rejected.
-- [ ] Curated puzzle can be approved.
+- [ ] Community target/hazard layout can be submitted.
+- [ ] Invalid community layout is rejected.
+- [ ] Curated layout can be approved.
 - [ ] Admin can preview seeds.
 - [ ] Bad content can be removed or disabled.
 
@@ -220,4 +222,3 @@ Keep the daily run as the primary mode. Events should supplement, not replace, t
 Mitigation:
 
 Test new mechanics in practice or event modes before adding them to daily ranked play.
-

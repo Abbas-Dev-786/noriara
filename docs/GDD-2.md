@@ -1,820 +1,495 @@
-# Game Design Document (GDD)
+# Game Design Document
 
-# Part 2 — Systems Design
-
----
+# Part 2 - Systems Design
 
 # Project
 
-**Daily Line** _(Working Title)_
+**Daily Line** *(Working Title)*
 
-Version: 1.0
+Version:
+
+1.0
 
 Document:
+
 Game Systems Design
 
 ---
 
-# 1. System Philosophy
+## 1. System Philosophy
 
-The entire game revolves around one idea:
+Every system exists to support one mechanic:
 
-> **Every second should create meaningful progress.**
+> A drawn gesture becomes a moving line that repeats itself.
 
-There are no filler mechanics.
-
-No inventory.
-
-No dialogue.
-
-No waiting.
-
-Every system either:
-
-- Increases mastery
-- Creates competition
-- Improves replayability
-- Encourages daily return
-
-Nothing else belongs in Phase 1.
+Nothing else belongs in Phase 1 unless it improves that loop.
 
 ---
 
-# 2. Daily Challenge System
+## 2. Daily Challenge System
 
-## Objective
-
-Every player in the world plays the exact same challenge each day.
+Every player in the world plays the same seeded challenge each UTC day.
 
 This ensures:
 
-- Fair competition
-- Comparable scores
-- Shared discussion
-- Daily anticipation
+- Fair competition.
+- Comparable scores.
+- Shared discussion.
+- Replayable spectator value.
 
----
-
-## Daily Lifecycle
+Daily lifecycle:
 
 ```text
 00:00 UTC
-
-↓
-
-New Daily Seed Generated
-
-↓
-
-Puzzle Sequence Created
-
-↓
-
-Leaderboard Reset
-
-↓
-
-Players Compete
-
-↓
-
+New daily seed
+Deterministic puzzle sequence
+Leaderboard reset
+Players compete
 23:59 UTC
-
-↓
-
-Leaderboard Locked
-
-↓
-
-Top Players Archived
-
-↓
-
-Tomorrow Begins
+Leaderboard locked
+Tomorrow begins
 ```
 
 ---
 
-## Daily Rules
+## 3. Endless Run System
 
-- One official puzzle sequence per day.
-- Every player receives identical puzzles.
-- Leaderboards are based only on today's seed.
-- Yesterday's leaderboard becomes read-only.
+Daily Line is not a campaign.
 
----
+A run is a 30-second sequence of short gesture puzzles.
 
-# 3. Procedural Puzzle Generator
-
-## Design Goal
-
-Never manually design thousands of puzzles.
-
-Instead:
-
-Design **systems** that generate puzzles.
-
-Procedural generation has long been used to improve replayability, but the best systems constrain randomness so puzzles remain interesting and solvable rather than arbitrary. :contentReference[oaicite:0]{index=0}
-
----
-
-## Generator Pipeline
+Flow:
 
 ```text
-Daily Seed
-
-↓
-
-Difficulty Level
-
-↓
-
-Puzzle Template
-
-↓
-
-Obstacle Generator
-
-↓
-
-Validation
-
-↓
-
-Playable Puzzle
-
-↓
-
-Serve To Player
+Puzzle appears
+Player draws one gesture
+Line moves
+Puzzle succeeds or resets
+Next puzzle on success
+Timer ends
+Results
 ```
 
 ---
 
-## Inputs
+## 4. Canonical Phase 1 Puzzle Grammar
 
-- Daily Seed
-- Puzzle Number
-- Difficulty Index
+Phase 1 has one puzzle type:
 
----
+> Collect all colored circles while avoiding black holes with a living repeated gesture.
 
-## Outputs
+Allowed board elements:
 
-- Start Position
-- Goal
-- Obstacles
-- Valid Solution
-- Estimated Difficulty
+- Colored target circles.
+- Black hazard circles.
+- Top and bottom bounce boundaries.
+- Left and right escape boundaries.
+- The player's moving line.
 
----
+Not allowed in Phase 1:
 
-# 4. Puzzle Templates
+- Start points.
+- Goal nodes.
+- Connect puzzles.
+- Cover puzzles.
+- Efficiency route objectives.
+- Switches.
+- Teleporters.
+- Walls.
+- Moving obstacles.
 
-Phase 1 should ship with a small number of highly polished templates.
-
-## Template A
-
-### Connect
-
-Draw from A → B.
-
----
-
-## Template B
-
-### Cover
-
-Cover an object completely.
+Future content must extend the living-line model instead of replacing it.
 
 ---
 
-## Template C
+## 5. Gesture System
 
-### Collect
-
-Touch every checkpoint.
-
----
-
-## Template D
-
-### Avoid
-
-Reach destination without touching obstacles.
-
----
-
-## Template E
-
-### Route
-
-Find the shortest legal path.
-
----
-
-Each template supports procedural variation.
-
----
-
-# 5. Puzzle Validation
-
-Every generated puzzle must satisfy:
-
-✅ Solvable
-
-✅ Single solution or acceptable multiple solutions
-
-✅ Completable within expected time
-
-✅ Difficulty within target range
-
-Reject any generated puzzle that fails validation.
-
----
-
-# 6. Difficulty System
-
-Difficulty should increase gradually during a run.
-
-Never spike suddenly.
-
----
-
-## Difficulty Variables
-
-Increase:
-
-- Number of obstacles
-- Path complexity
-- Required planning
-- Moving elements
-- Decision points
-
-Do **not** increase difficulty by:
-
-- Tiny hitboxes
-- Unfair precision
-- Hidden rules
-
----
-
-## Difficulty Curve
+Input states:
 
 ```text
-0-5 sec
-
-Tutorial
-
-↓
-
-5-10 sec
-
-Easy
-
-↓
-
-10-15 sec
-
-Easy+
-
-↓
-
-15-20 sec
-
-Medium
-
-↓
-
-20-25 sec
-
-Hard
-
-↓
-
-25-30 sec
-
-Expert
+idle
+drawing
+locomotion
+success
+failure
 ```
 
----
+Drawing rules:
 
-# 7. Endless Run System
+- Pointer down starts a single gesture.
+- Pointer movement records an ordered point array.
+- The raw path is smoothed and resampled.
+- Pointer up ends drawing and starts locomotion.
+- Multi-touch should be ignored or locked to the first pointer.
+- A gesture below minimum length is discarded.
 
-Unlike traditional level progression:
+Stored data:
 
-There is no final level.
-
-Players continue solving puzzles until time expires.
-
-This creates a natural personal best.
-
----
-
-## Flow
-
-```text
-Puzzle
-
-↓
-
-Solved
-
-↓
-
-Generate Next
-
-↓
-
-Solved
-
-↓
-
-Generate Next
-
-↓
-
-Timer Ends
-```
+- Raw points.
+- Smoothed/resampled points.
+- Start timestamp.
+- Release timestamp.
+- Puzzle index.
 
 ---
 
-# 8. Timer System
+## 6. Locomotion System
 
-## Match Timer
+The locomotion system turns the gesture into an infinite movement pattern.
 
-30 seconds.
+Algorithm:
 
-Cannot pause.
+1. Convert the smoothed gesture into displacement vectors.
+2. Move the line head along those vectors at constant speed.
+3. When the final displacement is consumed, restart from the first displacement.
+4. Apply each repeated displacement from the current head position.
+5. Maintain a history of head positions.
+6. Render only the trailing body whose arc length equals the original gesture length.
+7. Use the same body segments for collision.
 
-Cannot extend.
+Required behavior:
 
-Visible at all times.
+- The line keeps moving after release.
+- The body length remains constant.
+- The tail follows the exact path of the head.
+- The repeated path is continuous.
+- The system remains deterministic for replay and server validation.
 
 ---
 
-## Countdown
+## 7. Boundary System
+
+Top and bottom:
+
+- Reflect vertical movement.
+- Preserve speed.
+- Continue the repeated gesture after reflection.
+
+Left and right:
+
+- Do not bounce.
+- If the entire body exits horizontally and targets remain, the attempt fails.
+
+The line can partially leave the screen. Failure occurs only when the whole body is gone horizontally and the puzzle is unsolved.
+
+---
+
+## 8. Target System
+
+Colored circles are objectives.
+
+Rules:
+
+- A target is collected when any moving line segment intersects it.
+- Collected targets disappear immediately.
+- The puzzle succeeds when all targets are collected.
+- Target hit radii must be generous enough for mobile play.
+
+Feedback:
+
+- Soft pop.
+- Fade out.
+- Optional small sound.
+- Optional haptic pulse.
+
+---
+
+## 9. Hazard System
+
+Black circles are hazards.
+
+Rules:
+
+- Any body segment touching a hazard fails the attempt.
+- The whole line body is dangerous, including the tail.
+- Hazard hit radii must visually match collision radii.
+
+Feedback:
+
+- Black-hole/suck-in destruction if feasible.
+- Otherwise, clear collapse/fade plus screen shake.
+- Immediate redraw allowed.
+
+---
+
+## 10. Timer System
+
+The match timer is 30 seconds.
+
+Rules:
+
+- Starts after countdown.
+- Cannot pause.
+- Does not reset on attempt failure.
+- Ends the run immediately at zero.
+
+Countdown:
 
 ```text
 3
-
-↓
-
 2
-
-↓
-
 1
-
-↓
-
 GO
 ```
 
 ---
 
-## End Condition
+## 11. Scoring System
 
-Timer reaches zero.
+Score rewards speed, consistency, and progress.
 
-Current puzzle immediately ends.
-
-Final score calculated.
-
----
-
-# 9. Scoring System
-
-Score rewards:
-
-- Speed
-- Accuracy
-- Progress
-
----
-
-## Base Formula
+Initial formula:
 
 ```text
-Score
-
-=
-
-Puzzle Value
-
-+
-
-Speed Bonus
-
-+
-
-Combo Bonus
+score = puzzleValue + speedBonus + comboBonus
 ```
 
----
+Puzzle value:
 
-## Puzzle Value
+- Increases with puzzle index and generated difficulty.
 
-Every puzzle has:
+Speed bonus:
 
-Base Score
+- Higher for faster puzzle solves.
 
-Examples
+Combo bonus:
 
-Easy = 100
+- Increases after consecutive puzzle solves.
+- Resets on failed attempt.
 
-Medium = 200
-
-Hard = 350
-
-Expert = 500
+No score should depend on arbitrary gesture style in Phase 1.
 
 ---
 
-## Speed Bonus
-
-Fast completion awards bonus points.
-
-Example:
-
-```text
-Solved in
-
-1 second
-
-↓
-
-+50
-
-Solved in
-
-3 seconds
-
-↓
-
-+20
-```
-
----
-
-## Accuracy Bonus
-
-Reserved for Phase 2.
-
-Potential examples:
-
-- Minimal line length
-- No collisions
-- Perfect route
-
----
-
-# 10. Combo System
+## 12. Combo System
 
 Purpose:
 
-Reward consistency.
+- Reward consecutive successful puzzles.
 
----
-
-## Rule
-
-Every consecutive solved puzzle increases combo.
-
-Example:
-
-Puzzle 1
-
-1x
-
-Puzzle 2
-
-2x
-
-Puzzle 3
-
-3x
-
-Failure
-
-↓
-
-Combo resets.
-
----
-
-## Visual Feedback
-
-Combo displayed with:
-
-- Pulse animation
-- Glow
-- Increasing text scale
-
----
-
-# 11. Leaderboard System
-
-## Daily Leaderboard
-
-Displays:
-
-- Rank
-- Username
-- Score
-- Puzzles Solved
-
----
-
-## Sorting
-
-Primary
-
-Highest Score
-
-Secondary
-
-Fastest Completion Timestamp
-
----
-
-## Future
-
-- Friends
-- Weekly
-- Seasonal
-- Country
-
----
-
-# 12. Replay System
-
-Every run stores:
-
-- Daily Seed
-- Puzzle IDs
-- Drawing Coordinates
-- Timestamps
-
-This enables deterministic replay.
-
----
-
-## Replay Flow
+Rule:
 
 ```text
-Select Player
+Solve puzzle -> combo + 1
+Fail attempt -> combo = 0
+Timer ends -> final combo recorded
+```
 
-↓
+Visual feedback:
 
-Load Replay
+- Pulse.
+- Glow.
+- Brief scale.
 
-↓
+---
 
-Reconstruct Input
+## 13. Procedural Puzzle Generator
 
-↓
+Generator input:
 
-Animate Drawing
+- Daily seed.
+- Puzzle index.
+- Difficulty band.
 
-↓
+Generator output:
 
+- Target circle positions.
+- Hazard circle positions.
+- Board dimensions.
+- Collision radii.
+- Difficulty metadata.
+
+Generator pipeline:
+
+```text
+daily seed
+puzzle index
+difficulty band
+target placement
+hazard placement
+layout validation
+playable puzzle
+```
+
+The generator should create layouts that invite different gestures, not layouts with one prescribed path.
+
+---
+
+## 14. Generated Puzzle Validation
+
+Every generated puzzle must satisfy:
+
+- Targets and hazards fit inside the safe play area.
+- Targets are not visually overlapping.
+- Hazards are not placed directly on targets.
+- The first puzzle is solvable by a simple gesture.
+- Early puzzles have no tiny gaps or unfair traps.
+- Collision radii match visual sizes.
+- The puzzle can plausibly be solved in 1-5 seconds by a skilled player.
+
+Long-term validation should include automated simulation or curated seed review, but Phase 1 can begin with conservative layouts and deterministic seed tests.
+
+---
+
+## 15. Difficulty System
+
+Difficulty increases by adjusting:
+
+- Number of targets.
+- Number of hazards.
+- Distance between targets.
+- Hazard placement relative to likely repeated motion.
+- Need to use top/bottom bounce.
+- Spatial density while preserving fairness.
+
+Difficulty must not increase by adding unrelated puzzle types in Phase 1.
+
+---
+
+## 16. Replay System
+
+Every official run should store enough information to replay the living lines.
+
+Replay payload:
+
+- Version.
+- Daily seed.
+- Puzzle IDs.
+- Gesture point arrays.
+- Release timestamps.
+- Solve/failure events.
+- Final score.
+- Puzzles solved.
+
+Replay flow:
+
+```text
+Select replay
+Load seed and gestures
+Recreate puzzles
+Replay drawing phase
+Replay locomotion phase
+Show solves and failures
 Finish
 ```
 
----
-
-## MVP
-
-Replay Top 10 players.
+The replay system must use the same deterministic locomotion and collision code as gameplay.
 
 ---
 
-# 13. Streak System
+## 17. Leaderboard System
 
-Players earn a streak by completing one official run.
+Daily leaderboard displays:
 
----
+- Rank.
+- Player.
+- Score.
+- Puzzles solved.
 
-## Rules
+Sorting:
 
-Play Today
-
-↓
-
-+1
-
-Miss Tomorrow
-
-↓
-
-Reset
+1. Highest score.
+2. More puzzles solved.
+3. Faster final solve timestamp.
+4. Earlier submission time.
 
 ---
 
-Displayed On:
+## 18. Official Run Rules
 
-- Home Screen
-- Results Screen
+Default:
 
----
+- One official leaderboard submission per logged-in user per UTC day.
 
-# 14. Statistics
+Practice:
 
-Player Profile shows:
+- Can exist outside official scoring.
+- Does not affect leaderboard.
 
-- Current Streak
-- Longest Streak
-- Best Daily Rank
-- Highest Score
-- Total Runs
-- Total Puzzles Solved
+This decision can be revisited before Phase 2 implementation.
 
 ---
 
-# 15. Daily Progression
+## 19. Server Validation
 
-The player should feel:
+The client is not trusted for final score authority.
 
-```text
-Yesterday
+Server validation should:
 
-↓
-
-I solved 7
-
-↓
-
-Today
-
-↓
-
-I solved 9
-
-↓
-
-Tomorrow
-
-↓
-
-I'll reach 10
-```
-
-Progress is measured through mastery rather than XP.
+- Recreate the daily puzzle sequence.
+- Simulate submitted gestures.
+- Reproduce locomotion.
+- Reproduce target collection.
+- Reproduce hazard and boundary failures.
+- Recompute score.
+- Reject impossible timing or impossible pointer movement.
+- Reject duplicate official submissions.
 
 ---
 
-# 16. Retention Systems
+## 20. Streaks and Stats
 
-The MVP intentionally keeps retention lightweight.
+Streaks:
 
-## Daily Return
+- Increment when an official run is submitted.
+- Reset after a missed UTC day.
 
-✔ New puzzle sequence
+Stats:
 
-✔ New leaderboard
-
-✔ Personal improvement
-
----
-
-## Competitive Return
-
-✔ Beat yesterday
-
-✔ Beat friends
-
-✔ Reach Top 100
+- Current streak.
+- Longest streak.
+- Best score.
+- Best rank.
+- Highest puzzle reached.
+- Total official runs.
+- Total puzzles solved.
 
 ---
 
-## Curiosity Return
+## 21. Retention Systems
 
-✔ Watch top replay
+Daily return:
 
-✔ Learn new routes
+- New seed.
+- New leaderboard.
+- Personal improvement.
 
-Replayability is strongest when repeated sessions continue to reveal new strategies or outcomes rather than simply repeating identical content. :contentReference[oaicite:1]{index=1}
+Competitive return:
 
----
+- Beat yesterday.
+- Climb daily rank.
+- Study top replays.
 
-# 17. Puzzle Economy
+Curiosity return:
 
-The game has **no**:
-
-- Coins
-- Gems
-- Energy
-- Loot Boxes
-- Crafting
-- Shops
-
-Skill is the only currency.
+- Watch how different players solved the same board with different gestures.
 
 ---
 
-# 18. Failure System
+## 22. Future Expansion Hooks
 
-Failure is never punished heavily.
+Future systems may include:
 
-Failure costs:
+- Moving targets.
+- Gravity or wind fields that bend the moving line.
+- Portals.
+- Mirrors.
+- Weekly events.
+- Community-authored layouts.
 
-Time.
-
-Not progress.
-
-Incorrect line:
-
-↓
-
-Instant reset
-
-↓
-
-Continue playing
+Every future mechanic must preserve the living gesture identity.
 
 ---
 
-# 19. Session End
+## 23. System Design Principles
 
-At timer expiry:
+Every system must:
 
-```text
-Time Up
-
-↓
-
-Freeze Gameplay
-
-↓
-
-Calculate Score
-
-↓
-
-Leaderboard
-
-↓
-
-Replay Option
-
-↓
-
-Return Home
-```
-
----
-
-# 20. Future Expansion Hooks
-
-These systems are intentionally deferred.
-
-## Community Puzzles
-
-Players create puzzles.
-
----
-
-## Weekly Tournament
-
-Best score over seven days.
-
----
-
-## Ghost Racing
-
-Compete against yesterday's self.
-
----
-
-## Boss Puzzle
-
-Community unlocks a mega puzzle.
-
----
-
-## Seasons
-
-Monthly mechanics.
-
----
-
-## Puzzle Voting
-
-Community selects tomorrow's featured puzzle.
-
----
-
-# 21. System Design Principles
-
-Every future system must satisfy:
-
-- Adds mastery, not grind.
-- Encourages daily return.
-- Works in under 30 seconds.
-- Supports procedural generation.
-- Preserves competitive fairness.
-- Is understandable without a tutorial.
+- Support the living-line mechanic.
+- Add mastery, not grind.
+- Work in under 30 seconds.
+- Remain deterministic.
+- Support server validation.
+- Be understandable without a tutorial.
 
 If a proposed feature violates these principles, it should be reconsidered before entering the roadmap.
-
----
