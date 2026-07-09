@@ -73,7 +73,28 @@ export type SubmittedRunSummary = {
   score: number;
   puzzlesSolved: number;
   rank: number;
+  hasReplay: boolean;
   acceptedAt: string;
+};
+
+export type PlayerStats = {
+  currentStreak: number;
+  longestStreak: number;
+  bestScore: number;
+  bestRank: number | null;
+  highestPuzzleReached: number;
+  totalOfficialRuns: number;
+  totalPuzzlesSolved: number;
+  lastSubmissionDate: string | null;
+};
+
+export type PersonalBestSummary = {
+  previousBestScore: number | null;
+  previousBestPuzzlesSolved: number | null;
+  isNewBestScore: boolean;
+  isNewBestPuzzlesSolved: boolean;
+  scoreDelta: number | null;
+  puzzlesDelta: number | null;
 };
 
 export type LeaderboardEntry = {
@@ -81,6 +102,7 @@ export type LeaderboardEntry = {
   username: string;
   score: number;
   puzzlesSolved: number;
+  hasReplay: boolean;
   isCurrentUser: boolean;
 };
 
@@ -94,6 +116,7 @@ export type BootstrapResponse = {
   hasSubmittedToday: boolean;
   canStartOfficial: boolean;
   currentRun: SubmittedRunSummary | null;
+  playerStats: PlayerStats | null;
   leaderboardPreview: LeaderboardEntry[];
 };
 
@@ -122,6 +145,9 @@ export type SubmitRunResponse = {
   puzzlesSolved: number;
   rank: number | null;
   reason: string | null;
+  replayAvailable: boolean;
+  playerStats: PlayerStats | null;
+  personalBest: PersonalBestSummary | null;
   leaderboardPreview: LeaderboardEntry[];
 };
 
@@ -130,4 +156,9 @@ export type LeaderboardResponse = {
   date: string;
   entries: LeaderboardEntry[];
   currentUserRank: number | null;
+};
+
+export type StatsResponse = {
+  status: 'ok';
+  playerStats: PlayerStats | null;
 };

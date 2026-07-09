@@ -24,8 +24,22 @@ export interface GameCallbacks {
     result: { score: number; puzzlesSolved: number; maxCombo: number },
     telemetry: RunTelemetry
   ) => void;
-  onReady: (scene: Phaser.Scene & { startCountdown: () => void }) => void;
+  onReady: (scene: Phaser.Scene & { startCountdown: () => void; updateSettings: (settings: GameSettings) => void }) => void;
 }
+
+export interface GameSettings {
+  soundEnabled: boolean;
+  hapticsEnabled: boolean;
+  reducedMotion: boolean;
+  highContrast: boolean;
+}
+
+export const DEFAULT_GAME_SETTINGS: GameSettings = {
+  soundEnabled: true,
+  hapticsEnabled: true,
+  reducedMotion: false,
+  highContrast: false,
+};
 
 const GAME_WIDTH = 600;
 const GAME_HEIGHT = 400;
@@ -72,6 +86,7 @@ type PendingAttempt = {
 class DailyLineScene extends Phaser.Scene {
   private callbacks!: GameCallbacks;
   private seed!: string;
+  private settings: GameSettings = DEFAULT_GAME_SETTINGS;
 
   private puzzles: PuzzleLayout[] = [];
   private activePuzzleIndex = 0;
@@ -116,9 +131,10 @@ class DailyLineScene extends Phaser.Scene {
     super('DailyLineScene');
   }
 
-  init(data: { seed: string; callbacks: GameCallbacks }) {
+  init(data: { seed: string; callbacks: GameCallbacks; settings?: GameSettings }) {
     this.seed = data.seed;
     this.callbacks = data.callbacks;
+    this.settings = data.settings ?? DEFAULT_GAME_SETTINGS;
   }
 
   create() {
@@ -129,7 +145,15 @@ class DailyLineScene extends Phaser.Scene {
     this.input.on('pointermove', this.onPointerMove, this);
     this.input.on('pointerup', this.onPointerUp, this);
 
-    this.callbacks.onReady(this as unknown as Phaser.Scene & { startCountdown: () => void });
+    this.callbacks.onReady(this as unknown as Phaser.Scene & {
+      startCountdown: () => void;
+      updateSettings: (settings: GameSettings) => void;
+    });
+    this.renderScene();
+  }
+
+  public updateSettings(settings: GameSettings) {
+    this.settings = settings;
     this.renderScene();
   }
 
@@ -155,8 +179,12 @@ class DailyLineScene extends Phaser.Scene {
 
         if (count > 0) {
           this.activeCountdownText.setText(count.toString());
+          this.playTone(740, 0.05, 0.018);
+          this.vibrate(14);
         } else if (count === 0) {
           this.activeCountdownText.setText('GO!');
+          this.playTone(980, 0.08, 0.03);
+          this.vibrate(20);
         } else {
           this.activeCountdownText.destroy();
           this.activeCountdownText = null;
@@ -215,9 +243,10 @@ class DailyLineScene extends Phaser.Scene {
   }
 
   private renderScene() {
+    const palette = this.getPalette();
     this.graphics.clear();
 
-    this.graphics.fillStyle(0x0f172a, 1);
+    this.graphics.fillStyle(palette.background, 1);
     this.graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
     this.drawBounceBoundaries();
@@ -228,7 +257,8 @@ class DailyLineScene extends Phaser.Scene {
   }
 
   private drawBounceBoundaries() {
-    this.graphics.lineStyle(2, 0x314158, 1);
+    const palette = this.getPalette();
+    this.graphics.lineStyle(this.settings.highContrast ? 3 : 2, palette.boundary, 1);
     this.graphics.beginPath();
     this.graphics.moveTo(0, 2);
     this.graphics.lineTo(GAME_WIDTH, 2);
@@ -240,24 +270,26 @@ class DailyLineScene extends Phaser.Scene {
   private drawHazards() {
     const puzzle = this.puzzles[this.activePuzzleIndex];
     if (!puzzle) return;
+    const palette = this.getPalette();
 
     for (const hazard of puzzle.hazards) {
-      this.graphics.fillStyle(0x020617, 1);
+      this.graphics.fillStyle(palette.hazardAura, 1);
       this.graphics.fillCircle(hazard.x, hazard.y, hazard.r + 6);
-      this.graphics.lineStyle(2, 0x334155, 0.8);
+      this.graphics.lineStyle(this.settings.highContrast ? 3 : 2, palette.hazardRing, 0.9);
       this.graphics.strokeCircle(hazard.x, hazard.y, hazard.r + 3);
-      this.graphics.fillStyle(0x000000, 1);
+      this.graphics.fillStyle(palette.hazardCore, 1);
       this.graphics.fillCircle(hazard.x, hazard.y, hazard.r);
     }
   }
 
   private drawTargets() {
+    const palette = this.getPalette();
     for (const target of this.activeTargets) {
-      this.graphics.fillStyle(0x67e8f9, 0.2);
+      this.graphics.fillStyle(palette.targetGlow, this.settings.highContrast ? 0.32 : 0.2);
       this.graphics.fillCircle(target.x, target.y, target.r + 8);
-      this.graphics.fillStyle(0x38bdf8, 1);
+      this.graphics.fillStyle(palette.targetFill, 1);
       this.graphics.fillCircle(target.x, target.y, target.r);
-      this.graphics.lineStyle(2, 0xe0f2fe, 0.9);
+      this.graphics.lineStyle(this.settings.highContrast ? 3 : 2, palette.targetRing, 0.95);
       this.graphics.strokeCircle(target.x, target.y, target.r - 4);
     }
   }
@@ -274,7 +306,8 @@ class DailyLineScene extends Phaser.Scene {
 
     if (pathToRender.length < 2) return;
 
-    this.graphics.lineStyle(LINE_WIDTH + 4, 0x67e8f9, 0.15);
+    const palette = this.getPalette();
+    this.graphics.lineStyle(LINE_WIDTH + (this.settings.highContrast ? 5 : 4), palette.lineGlow, this.settings.highContrast ? 0.34 : 0.15);
     this.graphics.beginPath();
     this.graphics.moveTo(pathToRender[0]!.x, pathToRender[0]!.y);
     for (let i = 1; i < pathToRender.length; i++) {
@@ -283,7 +316,7 @@ class DailyLineScene extends Phaser.Scene {
     }
     this.graphics.strokePath();
 
-    this.graphics.lineStyle(LINE_WIDTH, 0xf8fafc, 1);
+    this.graphics.lineStyle(this.settings.highContrast ? LINE_WIDTH + 1 : LINE_WIDTH, palette.lineCore, 1);
     this.graphics.beginPath();
     this.graphics.moveTo(pathToRender[0]!.x, pathToRender[0]!.y);
     for (let i = 1; i < pathToRender.length; i++) {
@@ -294,11 +327,12 @@ class DailyLineScene extends Phaser.Scene {
   }
 
   private drawEffects() {
+    const palette = this.getPalette();
     for (const pop of this.popEffects) {
       const progress = pop.age / pop.maxAge;
       const radius = 10 + progress * 18;
       const alpha = 1 - progress;
-      this.graphics.lineStyle(3, 0xfef08a, alpha);
+      this.graphics.lineStyle(this.settings.highContrast ? 4 : 3, palette.pop, alpha);
       this.graphics.strokeCircle(pop.x, pop.y, radius);
     }
 
@@ -306,9 +340,9 @@ class DailyLineScene extends Phaser.Scene {
       const progress = this.failureEffect.age / this.failureEffect.maxAge;
       const radius = this.failureEffect.radius + progress * 28;
       const alpha = 1 - progress;
-      this.graphics.fillStyle(0x020617, alpha * 0.8);
+      this.graphics.fillStyle(palette.failureFill, alpha * 0.8);
       this.graphics.fillCircle(this.failureEffect.x, this.failureEffect.y, radius);
-      this.graphics.lineStyle(3, 0x94a3b8, alpha * 0.75);
+      this.graphics.lineStyle(this.settings.highContrast ? 4 : 3, palette.failureRing, alpha * 0.8);
       this.graphics.strokeCircle(this.failureEffect.x, this.failureEffect.y, radius);
     }
 
@@ -395,12 +429,15 @@ class DailyLineScene extends Phaser.Scene {
   }
 
   private registerTargetPop(target: PuzzleShape) {
+    if (this.settings.reducedMotion) return;
     this.popEffects.push({
       x: target.x,
       y: target.y,
       age: 0,
       maxAge: 220,
     });
+    this.playTone(880, 0.06, 0.02);
+    this.vibrate(16);
   }
 
   private failPuzzle(hitPoint?: Point, reason: FailureReason = 'hazard') {
@@ -415,7 +452,11 @@ class DailyLineScene extends Phaser.Scene {
     });
     this.combo = 0;
     this.callbacks.onScoreChange(this.score, this.combo);
-    this.cameras.main.shake(180, 0.008);
+    if (!this.settings.reducedMotion) {
+      this.cameras.main.shake(180, 0.008);
+    }
+    this.playTone(180, 0.18, 0.045);
+    this.vibrate(26);
 
     if (hitPoint) {
       this.failureEffect = {
@@ -450,7 +491,10 @@ class DailyLineScene extends Phaser.Scene {
     this.combo += 1;
     this.maxCombo = Math.max(this.maxCombo, this.combo);
     this.puzzlesSolved += 1;
-    this.flashAlpha = 0.35;
+    this.flashAlpha = this.settings.reducedMotion ? 0.12 : 0.35;
+    this.playTone(620, 0.09, 0.03);
+    this.playTone(780, 0.12, 0.025, 55);
+    this.vibrate(18);
     this.callbacks.onScoreChange(this.score, this.combo);
 
     this.time.delayedCall(220, () => {
@@ -622,6 +666,9 @@ class DailyLineScene extends Phaser.Scene {
     this.graphics.clear();
     this.input.removeAllListeners();
     this.activeCountdownText?.destroy();
+    this.playTone(520, 0.14, 0.025);
+    this.playTone(390, 0.2, 0.022, 65);
+    this.vibrate(24);
     this.callbacks.onFinish({
       score: this.score,
       puzzlesSolved: this.puzzlesSolved,
@@ -638,9 +685,85 @@ class DailyLineScene extends Phaser.Scene {
       },
     });
   }
+
+  private getPalette() {
+    if (this.settings.highContrast) {
+      return {
+        background: 0x020617,
+        boundary: 0xf8fafc,
+        hazardAura: 0xffffff,
+        hazardRing: 0xfbbf24,
+        hazardCore: 0x000000,
+        targetGlow: 0x22d3ee,
+        targetFill: 0x00ffff,
+        targetRing: 0xffffff,
+        lineGlow: 0x22d3ee,
+        lineCore: 0xffffff,
+        pop: 0xfef08a,
+        failureFill: 0x000000,
+        failureRing: 0xfbbf24,
+      };
+    }
+
+    return {
+      background: 0x0f172a,
+      boundary: 0x314158,
+      hazardAura: 0x020617,
+      hazardRing: 0x334155,
+      hazardCore: 0x000000,
+      targetGlow: 0x67e8f9,
+      targetFill: 0x38bdf8,
+      targetRing: 0xe0f2fe,
+      lineGlow: 0x67e8f9,
+      lineCore: 0xf8fafc,
+      pop: 0xfef08a,
+      failureFill: 0x020617,
+      failureRing: 0x94a3b8,
+    };
+  }
+
+  private playTone(frequency: number, durationSeconds: number, volume: number, delayMs: number = 0) {
+    if (!this.settings.soundEnabled) return;
+    const AudioContextCtor = globalThis.AudioContext;
+    if (!AudioContextCtor) return;
+
+    try {
+      const audioContext = new AudioContextCtor();
+      const now = audioContext.currentTime + delayMs / 1000;
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(frequency, now);
+      gainNode.gain.setValueAtTime(0.0001, now);
+      gainNode.gain.exponentialRampToValueAtTime(volume, now + 0.01);
+      gainNode.gain.exponentialRampToValueAtTime(0.0001, now + durationSeconds);
+
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.start(now);
+      oscillator.stop(now + durationSeconds + 0.02);
+      oscillator.onended = () => {
+        void audioContext.close();
+      };
+    } catch {
+      // Best-effort only.
+    }
+  }
+
+  private vibrate(durationMs: number) {
+    if (!this.settings.hapticsEnabled) return;
+    if (typeof navigator === 'undefined' || typeof navigator.vibrate !== 'function') return;
+
+    try {
+      navigator.vibrate(durationMs);
+    } catch {
+      // Best-effort only.
+    }
+  }
 }
 
-export function createGame(parent: HTMLElement, seed: string, callbacks: GameCallbacks): Phaser.Game {
+export function createGame(parent: HTMLElement, seed: string, callbacks: GameCallbacks, settings: GameSettings): Phaser.Game {
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     width: GAME_WIDTH,
@@ -654,7 +777,7 @@ export function createGame(parent: HTMLElement, seed: string, callbacks: GameCal
   };
 
   const game = new Phaser.Game(config);
-  game.scene.add('DailyLineScene', DailyLineScene, true, { seed, callbacks });
+  game.scene.add('DailyLineScene', DailyLineScene, true, { seed, callbacks, settings });
 
   return game;
 }

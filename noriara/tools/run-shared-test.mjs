@@ -9,7 +9,7 @@ const outDir = path.join(rootDir, '.tmp-tests', 'shared');
 
 await fs.rm(outDir, { recursive: true, force: true });
 await compileDirectory(sourceDir);
-await import(pathToFileURL(path.join(outDir, 'officialRunValidation.test.js')).href);
+await runCompiledTests(outDir);
 
 async function compileDirectory(directory) {
   const entries = await fs.readdir(directory, { withFileTypes: true });
@@ -48,4 +48,18 @@ function rewriteRelativeImports(code) {
       return `${prefix}${quote}${specifier}.js${quote}`;
     }
   );
+}
+
+async function runCompiledTests(directory) {
+  const entries = await fs.readdir(directory, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      await runCompiledTests(fullPath);
+      continue;
+    }
+    if (!entry.name.endsWith('.test.js')) continue;
+    await import(pathToFileURL(fullPath).href);
+  }
 }

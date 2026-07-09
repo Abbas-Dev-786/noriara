@@ -10,7 +10,9 @@ import type {
   InitResponse,
   LeaderboardEntry,
   LeaderboardResponse,
+  PlayerStats,
   StartRunResponse,
+  StatsResponse,
   SubmitRunRequest,
   SubmitRunResponse,
   SubmittedRunSummary,
@@ -18,6 +20,8 @@ import type {
 import { generatePuzzlesForSeed } from '../../shared/puzzle';
 import { generateSeed } from '../../shared/seed';
 import { validateOfficialRunPayload } from '../../shared/officialRunValidation';
+import { buildPersonalBestSummary, getEmptyPlayerStats, updatePlayerStats } from '../../shared/playerStats';
+import { createReplayData, type ReplayData, type ReplayResponse, validateReplay } from '../../shared/replay';
 
 type ErrorResponse = {
   status: 'error';
@@ -26,6 +30,8 @@ type ErrorResponse = {
 
 const OFFICIAL_RUN_TTL_SECONDS = 60 * 60 * 24 * 2;
 const RUN_META_TTL_SECONDS = 60 * 60 * 24 * 14;
+const REPLAY_TTL_SECONDS = 60 * 60 * 24 * 14;
+const PUBLIC_REPLAY_LIMIT = 10;
 const PREVIEW_LIMIT = 5;
 const LEADERBOARD_LIMIT = 25;
 
@@ -47,6 +53,7 @@ api.get('/bootstrap', async (c) => {
     getLeaderboardEntries(date, username ?? null, PREVIEW_LIMIT),
     username ? getSubmittedRunSummary(date, username) : Promise.resolve(null),
   ]);
+  const playerStats = username ? await getPlayerStats(username) : null;
 
   return c.json<BootstrapResponse>({
     status: 'ok',
@@ -58,6 +65,7 @@ api.get('/bootstrap', async (c) => {
     hasSubmittedToday: currentRun !== null,
     canStartOfficial: loggedIn && currentRun === null,
     currentRun,
+    playerStats,
     leaderboardPreview,
   });
 });
@@ -132,6 +140,9 @@ api.post('/run/submit', async (c) => {
       puzzlesSolved: 0,
       rank: null,
       reason: 'Login required for official submission.',
+      replayAvailable: false,
+      playerStats: null,
+      personalBest: null,
       leaderboardPreview: await getLeaderboardEntries(date, null, PREVIEW_LIMIT),
     });
   }
@@ -139,6 +150,7 @@ api.post('/run/submit', async (c) => {
   const payload = await c.req.json<SubmitRunRequest>();
   const runKey = getOfficialRunKey(date, username);
   const existingRun = await redis.hGetAll(runKey);
+  const currentStats = await getPlayerStats(username);
 
   if (!existingRun.runId || existingRun.runId !== payload.runId || existingRun.status !== 'started') {
     return c.json<SubmitRunResponse>({
@@ -149,6 +161,9 @@ api.post('/run/submit', async (c) => {
       puzzlesSolved: 0,
       rank: null,
       reason: 'Official run token is missing or invalid.',
+      replayAvailable: false,
+      playerStats: currentStats,
+      personalBest: null,
       leaderboardPreview: await getLeaderboardEntries(date, username, PREVIEW_LIMIT),
     });
   }
@@ -163,6 +178,9 @@ api.post('/run/submit', async (c) => {
       puzzlesSolved: currentRun.puzzlesSolved,
       rank: currentRun.rank,
       reason: 'Official run already submitted for today.',
+      replayAvailable: Boolean(await getReplay(date, username, username)),
+      playerStats: currentStats,
+      personalBest: null,
       leaderboardPreview: await getLeaderboardEntries(date, username, PREVIEW_LIMIT),
     });
   }
@@ -176,6 +194,9 @@ api.post('/run/submit', async (c) => {
       puzzlesSolved: 0,
       rank: null,
       reason: 'Daily seed mismatch.',
+      replayAvailable: false,
+      playerStats: currentStats,
+      personalBest: null,
       leaderboardPreview: await getLeaderboardEntries(date, username, PREVIEW_LIMIT),
     });
   }
@@ -195,12 +216,20 @@ api.post('/run/submit', async (c) => {
       puzzlesSolved: 0,
       rank: null,
       reason: validation.reason,
+      replayAvailable: false,
+      playerStats: currentStats,
+      personalBest: null,
       leaderboardPreview: await getLeaderboardEntries(date, username, PREVIEW_LIMIT),
     });
   }
 
   const runMetaKey = getRunMetaKey(date, username);
   const acceptedAt = new Date().toISOString();
+  const personalBest = buildPersonalBestSummary(
+    currentStats,
+    validation.finalScore,
+    validation.puzzlesSolved
+  );
   const rankScore = makeRankScore(
     validation.finalScore,
     validation.puzzlesSolved,
@@ -235,6 +264,33 @@ api.post('/run/submit', async (c) => {
     getCurrentUserRank(date, username),
     getLeaderboardEntries(date, username, PREVIEW_LIMIT),
   ]);
+  const updatedStats = updatePlayerStats(
+    currentStats,
+    date,
+    validation.finalScore,
+    validation.puzzlesSolved,
+    rank ?? 1
+  );
+  const replayData = createReplayData(
+    username,
+    date,
+    seed,
+    validation.finalScore,
+    validation.puzzlesSolved,
+    rank,
+    acceptedAt,
+    payload.telemetry
+  );
+  await redis.hSet(getPlayerStatsKey(username), serializePlayerStats(updatedStats));
+  let replayAvailable = false;
+  if (validateReplay(replayData)) {
+    await Promise.all([
+      redis.set(getPersonalReplayKey(date, username), JSON.stringify(replayData)),
+      redis.expire(getPersonalReplayKey(date, username), REPLAY_TTL_SECONDS),
+    ]);
+    await syncPublicReplays(date);
+    replayAvailable = true;
+  }
 
   return c.json<SubmitRunResponse>({
     status: 'ok',
@@ -244,6 +300,9 @@ api.post('/run/submit', async (c) => {
     puzzlesSolved: validation.puzzlesSolved,
     rank,
     reason: null,
+    replayAvailable,
+    playerStats: updatedStats,
+    personalBest,
     leaderboardPreview,
   });
 });
@@ -261,6 +320,28 @@ api.get('/leaderboard', async (c) => {
     date,
     entries,
     currentUserRank,
+  });
+});
+
+api.get('/stats', async (c) => {
+  const username = await reddit.getCurrentUsername();
+  const playerStats = username ? await getPlayerStats(username) : null;
+
+  return c.json<StatsResponse>({
+    status: 'ok',
+    playerStats,
+  });
+});
+
+api.get('/replay/:username', async (c) => {
+  const requestedUsername = c.req.param('username');
+  const date = c.req.query('date') ?? getCurrentDailySeed().date;
+  const viewerUsername = await reddit.getCurrentUsername();
+  const replay = await getReplay(date, requestedUsername, viewerUsername ?? null);
+
+  return c.json<ReplayResponse>({
+    status: 'ok',
+    replay,
   });
 });
 
@@ -346,6 +427,22 @@ function getOfficialRunKey(date: string, username: string) {
   return `officialRun:${date}:${username}`;
 }
 
+function getPlayerStatsKey(username: string) {
+  return `playerStats:${username}`;
+}
+
+function getPersonalReplayKey(date: string, username: string) {
+  return `daily:${date}:replay:self:${username}`;
+}
+
+function getPublicReplayKey(date: string, username: string) {
+  return `daily:${date}:replay:public:${username}`;
+}
+
+function getPublicReplaySetKey(date: string) {
+  return `daily:${date}:replay:public:set`;
+}
+
 function makeRankScore(
   finalScore: number,
   puzzlesSolved: number,
@@ -375,13 +472,17 @@ async function getSubmittedRunSummary(date: string, username: string): Promise<S
     return null;
   }
 
-  const rank = await getCurrentUserRank(date, username);
+  const [rank, hasReplay] = await Promise.all([
+    getCurrentUserRank(date, username),
+    redis.exists(getPersonalReplayKey(date, username)),
+  ]);
   if (rank === null) return null;
 
   return {
     score: parseInt(fields.score, 10),
     puzzlesSolved: parseInt(fields.puzzlesSolved, 10),
     rank,
+    hasReplay: hasReplay === 1,
     acceptedAt: fields.acceptedAt,
   };
 }
@@ -414,14 +515,116 @@ async function getLeaderboardEntries(
   for (let index = 0; index < ranked.length; index++) {
     const item = ranked[index]!;
     const fields = await redis.hGetAll(getRunMetaKey(date, item.member));
+    const hasReplay = await hasReplayAccess(date, item.member, currentUsername);
     entries.push({
       rank: index + 1,
       username: item.member,
       score: parseInt(fields.score ?? '0', 10),
       puzzlesSolved: parseInt(fields.puzzlesSolved ?? '0', 10),
+      hasReplay,
       isCurrentUser: currentUsername === item.member,
     });
   }
 
   return entries;
+}
+
+async function getPlayerStats(username: string): Promise<PlayerStats | null> {
+  const fields = await redis.hGetAll(getPlayerStatsKey(username));
+  if (!fields.lastSubmissionDate && !fields.totalOfficialRuns) {
+    return null;
+  }
+
+  const defaults = getEmptyPlayerStats();
+  return {
+    currentStreak: parseInt(fields.currentStreak ?? defaults.currentStreak.toString(), 10),
+    longestStreak: parseInt(fields.longestStreak ?? defaults.longestStreak.toString(), 10),
+    bestScore: parseInt(fields.bestScore ?? defaults.bestScore.toString(), 10),
+    bestRank: fields.bestRank ? parseInt(fields.bestRank, 10) : null,
+    highestPuzzleReached: parseInt(fields.highestPuzzleReached ?? defaults.highestPuzzleReached.toString(), 10),
+    totalOfficialRuns: parseInt(fields.totalOfficialRuns ?? defaults.totalOfficialRuns.toString(), 10),
+    totalPuzzlesSolved: parseInt(fields.totalPuzzlesSolved ?? defaults.totalPuzzlesSolved.toString(), 10),
+    lastSubmissionDate: fields.lastSubmissionDate ?? null,
+  };
+}
+
+function serializePlayerStats(stats: PlayerStats): Record<string, string> {
+  return {
+    currentStreak: stats.currentStreak.toString(),
+    longestStreak: stats.longestStreak.toString(),
+    bestScore: stats.bestScore.toString(),
+    bestRank: stats.bestRank === null ? '' : stats.bestRank.toString(),
+    highestPuzzleReached: stats.highestPuzzleReached.toString(),
+    totalOfficialRuns: stats.totalOfficialRuns.toString(),
+    totalPuzzlesSolved: stats.totalPuzzlesSolved.toString(),
+    lastSubmissionDate: stats.lastSubmissionDate ?? '',
+  };
+}
+
+async function getReplay(date: string, username: string, viewerUsername: string | null): Promise<ReplayData | null> {
+  const raw =
+    viewerUsername === username
+      ? ((await redis.get(getPersonalReplayKey(date, username))) ?? (await redis.get(getPublicReplayKey(date, username))))
+      : await redis.get(getPublicReplayKey(date, username));
+  if (!raw) return null;
+
+  try {
+    const replay = JSON.parse(raw) as ReplayData;
+    return validateReplay(replay) ? replay : null;
+  } catch {
+    return null;
+  }
+}
+
+async function hasReplayAccess(date: string, replayUsername: string, viewerUsername: string | null): Promise<boolean> {
+  if (viewerUsername === replayUsername) {
+    const personal = await redis.get(getPersonalReplayKey(date, replayUsername));
+    if (personal) return true;
+  }
+
+  const publicReplay = await redis.get(getPublicReplayKey(date, replayUsername));
+  return Boolean(publicReplay);
+}
+
+async function syncPublicReplays(date: string): Promise<void> {
+  const topEntries = await redis.zRange(getLeaderboardKey(date), 0, PUBLIC_REPLAY_LIMIT - 1, {
+    by: 'rank',
+    reverse: true,
+  });
+  const topUsernames = topEntries.map((entry) => entry.member);
+  const previousPublic = await getPublicReplayUsernames(date);
+
+  for (const username of topUsernames) {
+    const personalReplay = await redis.get(getPersonalReplayKey(date, username));
+    if (!personalReplay) continue;
+
+    await Promise.all([
+      redis.set(getPublicReplayKey(date, username), personalReplay),
+      redis.expire(getPublicReplayKey(date, username), REPLAY_TTL_SECONDS),
+    ]);
+  }
+
+  for (const username of previousPublic) {
+    if (topUsernames.includes(username)) continue;
+    await Promise.all([
+      redis.del(getPublicReplayKey(date, username)),
+    ]);
+  }
+
+  await Promise.all([
+    redis.set(getPublicReplaySetKey(date), JSON.stringify(topUsernames)),
+    redis.expire(getPublicReplaySetKey(date), REPLAY_TTL_SECONDS),
+  ]);
+}
+
+async function getPublicReplayUsernames(date: string): Promise<string[]> {
+  const raw = await redis.get(getPublicReplaySetKey(date));
+  if (!raw) return [];
+
+  try {
+    const usernames = JSON.parse(raw) as string[];
+    return Array.isArray(usernames) ? usernames : [];
+  } catch {
+    return [];
+  }
 }
