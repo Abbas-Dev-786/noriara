@@ -105,6 +105,80 @@ function buildMeta(
   };
 }
 
+function isHazardPlacementValid(
+  hazard: PuzzleShape,
+  targets: PuzzleShape[],
+  hazards: PuzzleShape[]
+): boolean {
+  if (hazard.x < 100 || hazard.x > 500 || hazard.y < 90 || hazard.y > 310) {
+    return false;
+  }
+
+  for (const target of targets) {
+    if (Math.hypot(target.x - hazard.x, target.y - hazard.y) < target.r + hazard.r + 18) {
+      return false;
+    }
+  }
+
+  for (const existingHazard of hazards) {
+    if (Math.hypot(existingHazard.x - hazard.x, existingHazard.y - hazard.y) < existingHazard.r + hazard.r + 20) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function addRandomValidHazard(
+  rng: RandomFn,
+  targets: PuzzleShape[],
+  hazards: PuzzleShape[],
+  options: {
+    xMin: number;
+    xMax: number;
+    yMin: number;
+    yMax: number;
+    rMin: number;
+    rMax: number;
+    attempts?: number;
+  }
+): boolean {
+  const attempts = options.attempts ?? 40;
+  for (let i = 0; i < attempts; i++) {
+    const hazard = {
+      x: randomRange(rng, options.xMin, options.xMax),
+      y: randomRange(rng, options.yMin, options.yMax),
+      r: randomRange(rng, options.rMin, options.rMax),
+    };
+    if (isHazardPlacementValid(hazard, targets, hazards)) {
+      hazards.push(hazard);
+      return true;
+    }
+  }
+  return false;
+}
+
+function addValidHazardNear(
+  targets: PuzzleShape[],
+  hazards: PuzzleShape[],
+  base: PuzzleShape,
+  candidateOffsets: Array<{ dx: number; dy: number }>,
+  radius: number
+): boolean {
+  for (const offset of candidateOffsets) {
+    const hazard = {
+      x: clamp(base.x + offset.dx, 100, 500),
+      y: clamp(base.y + offset.dy, 90, 310),
+      r: radius,
+    };
+    if (isHazardPlacementValid(hazard, targets, hazards)) {
+      hazards.push(hazard);
+      return true;
+    }
+  }
+  return false;
+}
+
 const buildOpenSweep: ArchetypeBuilder = (rng, band, _index) => {
   const targetCount = band === 'tutorial' ? 1 : band === 'easy' ? 2 : 3;
   const hazardCount = band === 'tutorial' || band === 'easy' ? 0 : band === 'medium' ? 1 : 2;
@@ -120,10 +194,13 @@ const buildOpenSweep: ArchetypeBuilder = (rng, band, _index) => {
   }
 
   for (let i = 0; i < hazardCount; i++) {
-    hazards.push({
-      x: randomRange(rng, 150, 450),
-      y: randomRange(rng, 120, 280),
-      r: randomRange(rng, 18, 30),
+    addRandomValidHazard(rng, targets, hazards, {
+      xMin: 150,
+      xMax: 450,
+      yMin: 120,
+      yMax: 280,
+      rMin: 18,
+      rMax: 30,
     });
   }
 
@@ -164,19 +241,45 @@ const buildBounceWeave: ArchetypeBuilder = (rng, band, _index) => {
   }
 
   if (requestedHazardCount > 0 && targets.length >= 2) {
-    hazards.push({
-      x: clamp((targets[0]!.x + targets[1]!.x) / 2, 100, 500),
-      y: randomRange(rng, 180, 220),
-      r: randomRange(rng, 20, 30),
-    });
+    const midpoint = {
+      x: (targets[0]!.x + targets[1]!.x) / 2,
+      y: 200,
+      r: randomRange(rng, 20, 26),
+    };
+    addValidHazardNear(
+      targets,
+      hazards,
+      midpoint,
+      [
+        { dx: 0, dy: 0 },
+        { dx: 34, dy: 0 },
+        { dx: -34, dy: 0 },
+        { dx: 0, dy: 34 },
+        { dx: 0, dy: -34 },
+      ],
+      midpoint.r
+    );
   }
 
   if (requestedHazardCount > 1 && targets.length >= 4) {
-    hazards.push({
-      x: clamp((targets[2]!.x + targets[3]!.x) / 2, 100, 500),
-      y: randomRange(rng, 180, 220),
-      r: randomRange(rng, 18, 24),
-    });
+    const midpoint = {
+      x: (targets[2]!.x + targets[3]!.x) / 2,
+      y: 200,
+      r: randomRange(rng, 18, 22),
+    };
+    addValidHazardNear(
+      targets,
+      hazards,
+      midpoint,
+      [
+        { dx: 0, dy: 0 },
+        { dx: 34, dy: 0 },
+        { dx: -34, dy: 0 },
+        { dx: 0, dy: 34 },
+        { dx: 0, dy: -34 },
+      ],
+      midpoint.r
+    );
   }
 
   return {
@@ -204,12 +307,13 @@ const buildHazardOrbit: ArchetypeBuilder = (rng, band, _index) => {
 
   if (hazardCount > 1) {
     const secondaryAngle = rng() > 0.5 ? Math.PI / 2 : -Math.PI / 2;
-    const secondaryDistance = randomRange(rng, 42, 56);
-    hazards.push({
+    const secondaryDistance = randomRange(rng, 58, 72);
+    const secondaryHazard = {
       x: clamp(hx + Math.cos(secondaryAngle) * secondaryDistance, 100, 500),
       y: clamp(hy + Math.sin(secondaryAngle) * secondaryDistance, 90, 310),
       r: randomRange(rng, 18, 22),
-    });
+    };
+    hazards.push(secondaryHazard);
   }
 
   const gapCenter = randomRange(rng, 0, Math.PI * 2);
@@ -264,10 +368,14 @@ const buildDelayedCatch: ArchetypeBuilder = (rng, band, _index) => {
   });
 
   for (let i = 0; i < hazardCount; i++) {
-    hazards.push({
-      x: randomRange(rng, 250, 350),
-      y: randomRange(rng, 150, 250),
-      r: randomRange(rng, 20, 25),
+    addRandomValidHazard(rng, targets, hazards, {
+      xMin: 250,
+      xMax: 350,
+      yMin: 150,
+      yMax: 250,
+      rMin: 20,
+      rMax: 25,
+      attempts: 60,
     });
   }
 
@@ -308,10 +416,14 @@ const buildWideSweep: ArchetypeBuilder = (rng, band, _index) => {
   targets.push({ x: maxX, y: baseY + randomRange(rng, -ySpread/2, ySpread/2), r: randomRange(rng, 22, 26) });
 
   for (let i = 0; i < hazardCount; i++) {
-    hazards.push({
-      x: randomRange(rng, minX + 50, maxX - 50),
-      y: baseY + (rng() > 0.5 ? 50 : -50),
-      r: randomRange(rng, 18, 30),
+    addRandomValidHazard(rng, targets, hazards, {
+      xMin: minX + 50,
+      xMax: maxX - 50,
+      yMin: clamp(baseY - 90, 90, 310),
+      yMax: clamp(baseY + 90, 90, 310),
+      rMin: 18,
+      rMax: 30,
+      attempts: 50,
     });
   }
 
@@ -352,11 +464,26 @@ const buildTightCluster: ArchetypeBuilder = (rng, band, _index) => {
   for (let i = 0; i < hazardCount; i++) {
     const angle = baseAngle + (i * Math.PI * 2) / Math.max(1, hazardCount) + randomRange(rng, -0.2, 0.2);
     const dist = clusterR + randomRange(rng, 38, 52);
-    hazards.push({
+    const anchor = {
       x: clamp(cx + Math.cos(angle) * dist, 100, 500),
       y: clamp(cy + Math.sin(angle) * dist, 90, 310),
       r: randomRange(rng, 18, 25),
-    });
+    };
+    addValidHazardNear(
+      targets,
+      hazards,
+      anchor,
+      [
+        { dx: 0, dy: 0 },
+        { dx: 16, dy: 0 },
+        { dx: -16, dy: 0 },
+        { dx: 0, dy: 16 },
+        { dx: 0, dy: -16 },
+        { dx: 24, dy: 24 },
+        { dx: -24, dy: -24 },
+      ],
+      anchor.r
+    );
   }
 
   return {
