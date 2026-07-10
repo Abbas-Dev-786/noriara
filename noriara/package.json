@@ -12,6 +12,7 @@
     "lint": "eslint \"src/**/*.{ts,tsx}\"",
     "login": "devvit login",
     "prettier": "prettier --write .",
+    "simulate:puzzles": "node tools/simulate-puzzles.mjs",
     "test": "npm run type-check && node tools/run-shared-test.mjs",
     "type-check": "tsc --build"
   },

@@ -9,6 +9,13 @@ Noriara is a daily Reddit puzzle game built with Devvit Web. Players trace a lau
 - Official submissions include telemetry that the server re-simulates before accepting a score.
 - Accepted runs update the daily leaderboard, player streak stats, and replay storage.
 
+## Puzzle Generation
+
+- The game uses a deterministic puzzle generator to ensure all players receive the same 30 puzzles for a given UTC date.
+- Puzzles are organized into difficulty bands (`tutorial`, `easy`, `medium`, `hard`, `expert`).
+- Archetypes scale in complexity (e.g., `open-sweep`, `wide-sweep`, `bounce-weave`, `tight-cluster`, `hazard-orbit`, `delayed-catch`).
+- Future interactive mechanics are registry-gated, disabled by default, and official run validation accepts only core mechanics.
+
 ## Runtime Behavior
 
 - `GET /api/bootstrap`: Returns the current daily seed, puzzles, leaderboard preview, and the viewer's submission state.

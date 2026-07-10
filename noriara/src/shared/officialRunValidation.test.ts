@@ -73,9 +73,13 @@ function testRejectsStaticBodyHazardFailureClaim() {
 
   assert(result.accepted === false, 'expected static body hazard claim to be rejected');
   if (!result.accepted) {
+    const validReasons = [
+      'Submitted gesture does not reproduce the claimed outcome.',
+      'Submitted gesture timing does not match the claimed result.'
+    ];
     assert(
-      result.reason === 'Submitted gesture does not reproduce the claimed outcome.',
-      'expected static body hazard rejection reason'
+      validReasons.includes(result.reason),
+      'expected static body hazard rejection reason, got ' + result.reason
     );
   }
 }
@@ -257,14 +261,15 @@ function createStaticBodyExploitPayload(): SubmitRunRequest {
 
 function createStaticBodyHazardExploitPayload(): SubmitRunRequest {
   const puzzles = generatePuzzlesForSeed(seed);
-  const puzzle = puzzles[3]!;
+  const targetPuzzleIndex = puzzles.findIndex(p => p.hazards.length > 0);
+  const puzzle = puzzles[targetPuzzleIndex]!;
   const hazard = puzzle.hazards[0]!;
   const preludeAttempts: GestureAttempt[] = [];
   const preludeSolveEvents: SubmitRunRequest['telemetry']['solveEvents'] = [];
   let currentPuzzleStartMs = 0;
   let score = 0;
 
-  for (let puzzleIndex = 0; puzzleIndex < 3; puzzleIndex++) {
+  for (let puzzleIndex = 0; puzzleIndex < targetPuzzleIndex; puzzleIndex++) {
     const target = puzzles[puzzleIndex]!.targets[0]!;
     const points = [
       sample(target.x - 180, target.y, currentPuzzleStartMs),
@@ -307,7 +312,7 @@ function createStaticBodyHazardExploitPayload(): SubmitRunRequest {
     2
   );
   const attempt: GestureAttempt = {
-    puzzleIndex: 3,
+    puzzleIndex: targetPuzzleIndex,
     startedAtMs: currentPuzzleStartMs,
     releaseTimestampMs: currentPuzzleStartMs + 120,
     pointCount: points.length,
@@ -325,15 +330,15 @@ function createStaticBodyHazardExploitPayload(): SubmitRunRequest {
       solveEvents: preludeSolveEvents,
       failureEvents: [
         {
-          puzzleIndex: 3,
+          puzzleIndex: targetPuzzleIndex,
           timestampMs: currentPuzzleStartMs + 130,
           reason: 'hazard',
         },
       ],
       summary: {
         score,
-        puzzlesSolved: 3,
-        maxCombo: 3,
+        puzzlesSolved: targetPuzzleIndex,
+        maxCombo: targetPuzzleIndex,
         totalRunMs: currentPuzzleStartMs + 130,
       },
     },

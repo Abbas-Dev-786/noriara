@@ -116,6 +116,12 @@ export function validateOfficialRunPayload(payload: SubmitRunRequest): Validatio
   }
 
   const puzzles = generatePuzzlesForSeed(payload.seed);
+  for (const puzzle of puzzles) {
+    const mechanics = puzzle.meta?.mechanics ?? ['core'];
+    if (mechanics.some((mechanic) => mechanic !== 'core')) {
+      return { accepted: false, reason: 'Submission references a disabled puzzle mechanic.' };
+    }
+  }
   let currentPuzzleIndex = 0;
   let currentPuzzleStartMs = 0;
   let recomputedScore = 0;
