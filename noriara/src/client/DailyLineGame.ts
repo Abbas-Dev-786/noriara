@@ -555,12 +555,13 @@ class DailyLineScene extends Phaser.Scene {
     }
 
     const tailIndex = Math.max(0, this.headIndex - this.snakeLength + 1);
+    const collisionStartIndex = Math.max(tailIndex, this.baseGesture.length - 1);
     const puzzle = this.puzzles[this.activePuzzleIndex];
     if (!puzzle) return;
 
     let hazardHit: Point | null = null;
 
-    for (let i = tailIndex; i < this.headIndex; i++) {
+    for (let i = collisionStartIndex; i < this.headIndex; i++) {
       const s1 = this.snakePath[i] as Point;
       const s2 = this.snakePath[i + 1] as Point;
 
@@ -689,36 +690,36 @@ class DailyLineScene extends Phaser.Scene {
   private getPalette() {
     if (this.settings.highContrast) {
       return {
-        background: 0x020617,
-        boundary: 0xf8fafc,
-        hazardAura: 0xffffff,
-        hazardRing: 0xfbbf24,
-        hazardCore: 0x000000,
-        targetGlow: 0x22d3ee,
-        targetFill: 0x00ffff,
+        background: 0xf8f3ea,
+        boundary: 0x1f1b18,
+        hazardAura: 0xf2d7c7,
+        hazardRing: 0x9c3f25,
+        hazardCore: 0x14110f,
+        targetGlow: 0xe7c4aa,
+        targetFill: 0xc45a32,
         targetRing: 0xffffff,
-        lineGlow: 0x22d3ee,
-        lineCore: 0xffffff,
-        pop: 0xfef08a,
-        failureFill: 0x000000,
-        failureRing: 0xfbbf24,
+        lineGlow: 0xc9af96,
+        lineCore: 0x1f1b18,
+        pop: 0xcfa134,
+        failureFill: 0x271812,
+        failureRing: 0x9c3f25,
       };
     }
 
     return {
-      background: 0x0f172a,
-      boundary: 0x314158,
-      hazardAura: 0x020617,
-      hazardRing: 0x334155,
-      hazardCore: 0x000000,
-      targetGlow: 0x67e8f9,
-      targetFill: 0x38bdf8,
-      targetRing: 0xe0f2fe,
-      lineGlow: 0x67e8f9,
-      lineCore: 0xf8fafc,
-      pop: 0xfef08a,
-      failureFill: 0x020617,
-      failureRing: 0x94a3b8,
+      background: 0xf4efe5,
+      boundary: 0x8f8477,
+      hazardAura: 0xd6cab9,
+      hazardRing: 0x65584c,
+      hazardCore: 0x161311,
+      targetGlow: 0xead7c2,
+      targetFill: 0xb84a29,
+      targetRing: 0xfffaf3,
+      lineGlow: 0xcdb69d,
+      lineCore: 0x29231d,
+      pop: 0xc29330,
+      failureFill: 0x3b2a24,
+      failureRing: 0x8d442c,
     };
   }
 
@@ -769,7 +770,7 @@ export function createGame(parent: HTMLElement, seed: string, callbacks: GameCal
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
     parent,
-    backgroundColor: '#0f172a',
+    backgroundColor: '#f4efe5',
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,

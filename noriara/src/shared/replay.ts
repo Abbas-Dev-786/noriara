@@ -144,6 +144,7 @@ function simulateReplayAttempt(
   const activeTargets = targets.map((target, index) => ({ ...target, replayIndex: index }));
   const snakePath = [...normalizedGesture];
   const snakeLength = normalizedGesture.length;
+  const collisionStartBaseIndex = normalizedGesture.length - 1;
   const targetHits: Array<{ step: number; targetIndex: number }> = [];
   let headIndex = normalizedGesture.length - 1;
   let yDir = 1;
@@ -166,9 +167,10 @@ function simulateReplayAttempt(
     snakePath[headIndex] = bounced.point;
 
     const tailIndex = Math.max(0, headIndex - snakeLength + 1);
+    const collisionStartIndex = Math.max(tailIndex, collisionStartBaseIndex);
     let hazardHit = false;
 
-    for (let i = tailIndex; i < headIndex; i++) {
+    for (let i = collisionStartIndex; i < headIndex; i++) {
       const s1 = snakePath[i] as Point;
       const s2 = snakePath[i + 1] as Point;
 

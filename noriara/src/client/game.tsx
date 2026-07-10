@@ -1,7 +1,7 @@
 import './index.css';
 
 import { StrictMode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ReactNode } from 'react';
+import type { Dispatch, ReactNode, SetStateAction } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createGame, DEFAULT_GAME_SETTINGS, GameCallbacks, type GameSettings } from './DailyLineGame';
 import type Phaser from 'phaser';
@@ -21,6 +21,7 @@ import { buildReplayTimeline, type ReplayData, type ReplayResponse } from '../sh
 import type { Point } from '../shared/geom';
 
 type GameState = 'bootstrap' | 'ready' | 'playing' | 'results' | 'error';
+type PageView = 'home' | 'leaderboard' | 'stats' | 'settings' | 'replay';
 
 type RunResult = {
   score: number;
@@ -40,12 +41,9 @@ const GAME_SETTINGS_KEY = 'daily-line-settings';
 export const App = () => {
   const [bootstrap, setBootstrap] = useState<BootstrapResponse | null>(null);
   const [gameState, setGameState] = useState<GameState>('bootstrap');
+  const [pageView, setPageView] = useState<PageView>('home');
   const [sessionId, setSessionId] = useState(0);
   const [runMode, setRunMode] = useState<RunMode>('practice');
-  const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [showStats, setShowStats] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [showReplay, setShowReplay] = useState(false);
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
   const [settings, setSettings] = useState<GameSettings>(DEFAULT_GAME_SETTINGS);
@@ -142,7 +140,7 @@ export const App = () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: LeaderboardResponse = await res.json();
       setLeaderboardEntries(data.entries);
-      setShowLeaderboard(true);
+      setPageView('leaderboard');
     } catch (error) {
       console.error('Failed to load leaderboard', error);
     }
@@ -154,7 +152,7 @@ export const App = () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data: StatsResponse = await res.json();
       setPlayerStats(data.playerStats);
-      setShowStats(true);
+      setPageView('stats');
     } catch (error) {
       console.error('Failed to load stats', error);
     }
@@ -190,10 +188,7 @@ export const App = () => {
     setTimeMs(30000);
     setFinalResult(null);
     setSubmissionState({ status: 'idle' });
-    setShowLeaderboard(false);
-    setShowStats(false);
-    setShowSettings(false);
-    setShowReplay(false);
+    setPageView('home');
     setGameState('playing');
     pendingCountdownRef.current = true;
     phaserSceneRef.current?.startCountdown();
@@ -346,8 +341,7 @@ export const App = () => {
     pendingCountdownRef.current = false;
     setRunMode('practice');
     setSubmissionState({ status: 'idle' });
-    setShowStats(false);
-    setShowReplay(false);
+    setPageView('home');
     setGameState('ready');
   };
 
@@ -366,12 +360,12 @@ export const App = () => {
         }
         const data: ReplayResponse = await res.json();
         setActiveReplay(data.replay);
-        setShowReplay(true);
+        setPageView('replay');
       } catch (error) {
         console.error('Failed to load replay', error);
         setReplayError(error instanceof Error ? error.message : 'Unknown error');
         setActiveReplay(null);
-        setShowReplay(true);
+        setPageView('replay');
       } finally {
         setReplayLoading(false);
       }
@@ -386,61 +380,51 @@ export const App = () => {
 
   const officialSubmitted = bootstrap?.hasSubmittedToday ?? false;
   const canStartOfficial = bootstrap?.canStartOfficial ?? false;
+  const replayPanelKey = activeReplay ? `${activeReplay.username}-${activeReplay.acceptedAt}` : 'replay-empty';
+  const isHomeView = pageView === 'home';
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,_#1e293b,_#0f172a_60%)] text-slate-100">
-      <div className="mx-auto flex min-h-screen w-full max-w-5xl flex-col px-4 pb-6 pt-4">
-        <header className="mb-4 flex items-start justify-between rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 backdrop-blur">
-          <div className="flex flex-col">
-            <span className="text-xs font-semibold uppercase tracking-[0.35em] text-cyan-300/80">
-              Daily Line
-            </span>
-            <span className="text-sm text-slate-300">
-              {dailyDate || 'Loading daily board'}
-            </span>
+    <div className="app-shell">
+      <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-4 sm:px-6">
+        <header className="surface-panel motion-rise mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[24px] px-4 py-3">
+          <div className="flex min-w-0 items-center gap-3">
+            <span className="display-title text-xl">Daily Line</span>
+            <span className="hidden h-4 w-px bg-[rgba(191,180,164,0.9)] sm:block" />
+            <span className="text-sm ink-muted">{dailyDate || 'Loading board'}</span>
           </div>
-
-          <div className="text-right text-sm text-slate-400">
-            <div>{username ?? 'practice mode'}</div>
-            {playerStats && (
-              <div className="text-xs uppercase tracking-[0.25em] text-cyan-300/80">
-                Streak {playerStats.currentStreak}
-              </div>
-            )}
-            {bestLocalScore !== null && (
-              <div className="text-xs uppercase tracking-[0.25em] text-amber-300/80">
-                Local Best {bestLocalScore}
-              </div>
-            )}
+          <div className="flex flex-wrap items-center gap-2 text-xs ink-muted">
+            <span className="rounded-full border soft-divider px-3 py-1">{username ?? 'Practice'}</span>
+            {playerStats && <span className="rounded-full border soft-divider px-3 py-1">Streak {playerStats.currentStreak}</span>}
+            {bestLocalScore !== null && <span className="rounded-full border soft-divider px-3 py-1">Best {bestLocalScore}</span>}
           </div>
         </header>
 
-        <main className="relative mx-auto flex w-full max-w-3xl flex-1 flex-col">
-          {gameState === 'playing' && (
-            <div className="mb-4 grid grid-cols-3 gap-3">
-              <HudStat label="Time" value={formatTime(timeMs)} accent="text-cyan-200" />
-              <HudStat label="Score" value={score.toString()} accent="text-emerald-300" />
-              <HudStat label="Combo" value={`x${combo}`} accent={combo > 1 ? 'text-amber-300' : 'text-slate-300'} />
+        <main className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col">
+          {gameState === 'playing' && isHomeView && (
+            <div className="motion-soft mb-4 grid grid-cols-3 gap-3">
+              <HudStat label="Time" value={formatTime(timeMs)} accent="accent-warm" />
+              <HudStat label="Score" value={score.toString()} accent="accent-moss" />
+              <HudStat label="Combo" value={`x${combo}`} accent={combo > 1 ? 'accent-gold' : 'ink-muted'} />
             </div>
           )}
 
-          {gameState === 'bootstrap' && (
-            <div className="flex aspect-[3/2] items-center justify-center rounded-[24px] border border-white/10 bg-slate-950/40 shadow-2xl">
-              <div className="text-sm font-semibold uppercase tracking-[0.35em] text-slate-400">
+          {gameState === 'bootstrap' && isHomeView && (
+            <div className="surface-panel-strong flex aspect-[3/2] items-center justify-center rounded-[30px]">
+              <div className="label-kicker">
                 Loading daily seed...
               </div>
             </div>
           )}
 
-          {gameState === 'error' && (
-            <div className="flex aspect-[3/2] flex-col items-center justify-center rounded-[24px] border border-rose-400/30 bg-slate-950/40 px-6 text-center shadow-2xl">
-              <h2 className="mb-3 text-2xl font-semibold text-rose-200">Bootstrap failed</h2>
-              <p className="mb-6 max-w-md text-sm text-slate-300">
+          {gameState === 'error' && isHomeView && (
+            <div className="surface-panel-strong flex aspect-[3/2] flex-col items-center justify-center rounded-[30px] px-6 text-center">
+              <h2 className="display-title mb-3 text-2xl accent-warm">Bootstrap failed</h2>
+              <p className="body-copy mb-6 max-w-md text-sm">
                 The game could not load today&apos;s daily state from the server.
               </p>
               <button
                 onClick={() => void fetchBootstrap()}
-                className="rounded-full bg-cyan-400 px-6 py-3 text-sm font-semibold uppercase tracking-[0.3em] text-slate-950 transition hover:bg-cyan-300"
+                className="action-button action-primary"
               >
                 Retry
               </button>
@@ -449,240 +433,177 @@ export const App = () => {
 
           <div
             ref={gameRef}
-            className={`w-full aspect-[3/2] overflow-hidden rounded-[24px] border border-cyan-200/10 bg-[#0f172a] shadow-[0_30px_80px_rgba(15,23,42,0.45)] ${
-              gameState === 'bootstrap' || gameState === 'error' ? 'hidden' : 'block'
+            className={`surface-panel-strong texture-grid w-full aspect-[3/2] overflow-hidden rounded-[30px] shadow-[0_20px_55px_rgba(63,45,29,0.12)] ${
+              !isHomeView || gameState === 'bootstrap' || gameState === 'error' ? 'hidden' : 'block'
             }`}
           />
 
-          {gameState === 'ready' && bootstrap && (
+          {isHomeView && gameState === 'ready' && bootstrap && (
             <OverlayCard>
-              <p className="mb-2 text-xs uppercase tracking-[0.35em] text-cyan-300/80">Today&apos;s challenge</p>
-              <h1 className="mb-3 text-4xl font-semibold text-white">Draw. Release. Compete.</h1>
-              <p className="mb-4 max-w-md text-center text-sm text-slate-300">
-                Shape one living line to collect every target and avoid the black holes before time runs out.
-              </p>
-
-              {!bootstrap.loggedIn && (
-                <p className="mb-4 text-sm text-amber-200">
-                  Practice is available. Official daily ranking requires a logged-in Reddit account.
-                </p>
-              )}
-
-              {officialSubmitted && bootstrap.currentRun && (
-                <div className="mb-4 flex flex-col items-center gap-2">
-                  <p className="text-sm text-emerald-200">
-                    Official run submitted: {bootstrap.currentRun.score} points, rank {bootstrap.currentRun.rank}.
+              <div className="motion-rise mx-auto flex w-full max-w-2xl flex-col items-center justify-center text-center">
+                <div className="surface-panel rounded-[28px] px-6 py-8 sm:px-8 sm:py-10">
+                  <p className="label-kicker">Today&apos;s run</p>
+                  <h2 className="display-title mt-4 text-4xl sm:text-5xl">Draw. Release. Move.</h2>
+                  <p className="body-copy mx-auto mt-4 max-w-md text-sm sm:text-base">
+                    One line. Thirty seconds. Same board for everyone.
                   </p>
-                  {bootstrap.currentRun.hasReplay && username && (
-                    <button
-                      onClick={() => void openReplay(username)}
-                      className="rounded-full border border-amber-300/25 bg-amber-300/10 px-5 py-2 text-xs font-semibold uppercase tracking-[0.25em] text-amber-100 transition hover:bg-amber-300/20"
-                    >
-                      Watch Replay
+
+                  {officialSubmitted && bootstrap.currentRun ? (
+                    <div className="mt-5 rounded-[22px] border soft-divider bg-white/38 px-4 py-4 text-sm">
+                      <span className="accent-moss">Official run submitted.</span>{' '}
+                      <span className="numeric">#{bootstrap.currentRun.rank}</span> with{' '}
+                      <span className="numeric">{bootstrap.currentRun.score}</span>.
+                    </div>
+                  ) : !bootstrap.loggedIn ? (
+                    <div className="mt-5 rounded-[22px] border soft-divider bg-white/38 px-4 py-4 text-sm ink-muted">
+                      Practice is available now. Official ranking requires Reddit login.
+                    </div>
+                  ) : null}
+
+                  <div className="mt-6 flex flex-wrap justify-center gap-3">
+                    {canStartOfficial && (
+                      <button onClick={() => void handleOfficialStart()} className="action-button action-primary">
+                        Official Run
+                      </button>
+                    )}
+                    <button onClick={handlePracticeStart} className="action-button action-secondary">
+                      {canStartOfficial ? 'Practice' : 'Start Practice'}
                     </button>
+                    {officialSubmitted && bootstrap.currentRun?.hasReplay && username && (
+                      <button onClick={() => void openReplay(username)} className="action-button action-secondary">
+                        Replay
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-3 text-sm ink-muted">
+                    <button onClick={() => void fetchLeaderboard()} className="transition-colors hover:text-[rgb(41,35,29)]">
+                      Leaderboard
+                    </button>
+                    {bootstrap.loggedIn && (
+                      <button onClick={() => void fetchStats()} className="transition-colors hover:text-[rgb(41,35,29)]">
+                        Stats
+                      </button>
+                    )}
+                    <button onClick={() => setPageView('settings')} className="transition-colors hover:text-[rgb(41,35,29)]">
+                      Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </OverlayCard>
+          )}
+
+          {isHomeView && gameState === 'results' && finalResult && (
+            <OverlayCard>
+              <div className="motion-rise mx-auto grid w-full max-w-3xl gap-4">
+                <section className="surface-panel rounded-[26px] p-6 sm:p-8">
+                  <p className="label-kicker">
+                    {runMode === 'official' ? 'Official run complete' : 'Practice run complete'}
+                  </p>
+                  <h2 className="display-title mt-4 text-4xl sm:text-[3rem]">Time&apos;s up</h2>
+
+                  <div className="mt-6 grid grid-cols-2 gap-4">
+                    <ResultStat label="Final Score" value={finalResult.score.toString()} accent="accent-warm" icon={<TinyIcon>点</TinyIcon>} />
+                    <ResultStat label="Puzzles" value={finalResult.puzzlesSolved.toString()} accent="accent-moss" icon={<TinyIcon>手</TinyIcon>} />
+                    <ResultStat label="Max Combo" value={`x${finalResult.maxCombo}`} accent="accent-gold" icon={<TinyIcon>連</TinyIcon>} />
+                    <ResultStat
+                      label="Local Best"
+                      value={(bestLocalScore ?? finalResult.score).toString()}
+                      accent="accent-mist"
+                      icon={<TinyIcon>記</TinyIcon>}
+                    />
+                  </div>
+
+                  <div className="mt-5 space-y-3">
+                    <SubmissionBanner submissionState={submissionState} />
+                    <PersonalBestBanner submissionState={submissionState} />
+                  </div>
+                  {playerStats && (
+                    <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                      <CompactStat label="Streak" value={playerStats.currentStreak.toString()} accent="accent-moss" icon={<TinyIcon>日</TinyIcon>} />
+                      <CompactStat label="Longest" value={playerStats.longestStreak.toString()} accent="accent-gold" icon={<TinyIcon>長</TinyIcon>} />
+                      <CompactStat
+                        label="Best Rank"
+                        value={playerStats.bestRank ? `#${playerStats.bestRank}` : '--'}
+                        accent="accent-warm"
+                        icon={<TinyIcon>位</TinyIcon>}
+                      />
+                      <CompactStat
+                        label="Solved"
+                        value={playerStats.totalPuzzlesSolved.toString()}
+                        accent="accent-mist"
+                        icon={<TinyIcon>成</TinyIcon>}
+                      />
+                    </div>
                   )}
-                </div>
-              )}
 
-              {playerStats && (
-                <div className="mb-6 grid w-full max-w-xl grid-cols-2 gap-3 md:grid-cols-4">
-                  <CompactStat label="Streak" value={playerStats.currentStreak.toString()} accent="text-cyan-200" />
-                  <CompactStat label="Best Score" value={playerStats.bestScore.toString()} accent="text-amber-200" />
-                  <CompactStat
-                    label="Best Rank"
-                    value={playerStats.bestRank ? `#${playerStats.bestRank}` : '-'}
-                    accent="text-emerald-200"
-                  />
-                  <CompactStat
-                    label="Total Runs"
-                    value={playerStats.totalOfficialRuns.toString()}
-                    accent="text-fuchsia-200"
-                  />
-                </div>
-              )}
-
-              <div className="mb-8 flex flex-wrap items-center justify-center gap-3">
-                {canStartOfficial && (
-                  <button
-                    onClick={() => void handleOfficialStart()}
-                    className="rounded-full bg-amber-300 px-8 py-3 text-sm font-semibold uppercase tracking-[0.35em] text-slate-950 transition hover:bg-amber-200"
-                  >
-                    Official Run
-                  </button>
-                )}
-                <button
-                  onClick={handlePracticeStart}
-                  className="rounded-full border border-cyan-300/40 bg-cyan-400/10 px-8 py-3 text-sm font-semibold uppercase tracking-[0.35em] text-cyan-100 transition hover:bg-cyan-400/20"
-                >
-                  {canStartOfficial ? 'Practice' : 'Practice Run'}
-                </button>
-                <button
-                  onClick={() => void fetchLeaderboard()}
-                  className="rounded-full border border-white/15 bg-white/5 px-8 py-3 text-sm font-semibold uppercase tracking-[0.35em] text-slate-200 transition hover:bg-white/10"
-                >
-                  Leaderboard
-                </button>
-                <button
-                  onClick={() => setShowSettings(true)}
-                  className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-8 py-3 text-sm font-semibold uppercase tracking-[0.35em] text-cyan-100 transition hover:bg-cyan-400/20"
-                >
-                  Settings
-                </button>
-                {bootstrap.loggedIn && (
-                  <button
-                    onClick={() => void fetchStats()}
-                    className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-8 py-3 text-sm font-semibold uppercase tracking-[0.35em] text-emerald-100 transition hover:bg-emerald-400/20"
-                  >
-                    Stats
-                  </button>
-                )}
-              </div>
-
-              <LeaderboardPreview entries={leaderboardEntries} onOpenReplay={openReplay} />
-            </OverlayCard>
-          )}
-
-          {gameState === 'results' && finalResult && (
-            <OverlayCard>
-              <p className="mb-2 text-xs uppercase tracking-[0.35em] text-amber-300/80">
-                {runMode === 'official' ? 'Official run complete' : 'Practice run complete'}
-              </p>
-              <h2 className="mb-8 text-4xl font-semibold text-white">Time&apos;s up</h2>
-
-              <div className="mb-6 grid w-full max-w-lg grid-cols-2 gap-4">
-                <ResultStat label="Final Score" value={finalResult.score.toString()} accent="text-amber-300" />
-                <ResultStat label="Puzzles" value={finalResult.puzzlesSolved.toString()} accent="text-cyan-200" />
-                <ResultStat label="Max Combo" value={`x${finalResult.maxCombo}`} accent="text-emerald-300" />
-                <ResultStat
-                  label="Local Best"
-                  value={(bestLocalScore ?? finalResult.score).toString()}
-                  accent="text-fuchsia-200"
-                />
-              </div>
-
-              <SubmissionBanner submissionState={submissionState} />
-              <PersonalBestBanner submissionState={submissionState} />
-
-              {playerStats && (
-                <div className="mt-6 grid w-full max-w-lg grid-cols-2 gap-4">
-                  <CompactStat label="Current Streak" value={playerStats.currentStreak.toString()} accent="text-cyan-200" />
-                  <CompactStat label="Longest Streak" value={playerStats.longestStreak.toString()} accent="text-emerald-200" />
-                  <CompactStat
-                    label="Best Rank"
-                    value={playerStats.bestRank ? `#${playerStats.bestRank}` : '-'}
-                    accent="text-amber-200"
-                  />
-                  <CompactStat
-                    label="Total Solved"
-                    value={playerStats.totalPuzzlesSolved.toString()}
-                    accent="text-fuchsia-200"
-                  />
-                </div>
-              )}
-
-              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
-                <button
-                  onClick={handlePlayAgain}
-                  className="rounded-full bg-cyan-400 px-8 py-3 text-sm font-semibold uppercase tracking-[0.35em] text-slate-950 transition hover:bg-cyan-300"
-                >
-                  Practice Again
-                </button>
-                <button
-                  onClick={() => void fetchLeaderboard()}
-                  className="rounded-full border border-white/15 bg-white/5 px-8 py-3 text-sm font-semibold uppercase tracking-[0.35em] text-slate-200 transition hover:bg-white/10"
-                >
-                  Leaderboard
-                </button>
-                {submissionState.status === 'accepted' && submissionState.rank !== null && submissionState.replayAvailable && (
-                  <button
-                    onClick={() => username && void openReplay(username)}
-                    className="rounded-full border border-amber-300/25 bg-amber-300/10 px-8 py-3 text-sm font-semibold uppercase tracking-[0.35em] text-amber-100 transition hover:bg-amber-300/20"
-                  >
-                    Watch Replay
-                  </button>
-                )}
-                <button
-                  onClick={() => setShowSettings(true)}
-                  className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-8 py-3 text-sm font-semibold uppercase tracking-[0.35em] text-cyan-100 transition hover:bg-cyan-400/20"
-                >
-                  Settings
-                </button>
-                {bootstrap?.loggedIn && (
-                  <button
-                    onClick={() => void fetchStats()}
-                    className="rounded-full border border-emerald-300/25 bg-emerald-400/10 px-8 py-3 text-sm font-semibold uppercase tracking-[0.35em] text-emerald-100 transition hover:bg-emerald-400/20"
-                  >
-                    Stats
-                  </button>
-                )}
+                  <div className="mt-6 flex flex-wrap gap-3">
+                    <button onClick={handlePlayAgain} className="action-button action-primary">
+                      Practice Again
+                    </button>
+                    <button onClick={() => void fetchLeaderboard()} className="action-button action-secondary">
+                      Leaderboard
+                    </button>
+                    {submissionState.status === 'accepted' && submissionState.rank !== null && submissionState.replayAvailable && (
+                      <button onClick={() => username && void openReplay(username)} className="action-button action-secondary">
+                        Replay
+                      </button>
+                    )}
+                    <button onClick={() => setPageView('settings')} className="action-button action-subtle">
+                      Settings
+                    </button>
+                    {bootstrap?.loggedIn && (
+                      <button onClick={() => void fetchStats()} className="action-button action-subtle">
+                        Stats
+                      </button>
+                    )}
+                  </div>
+                </section>
               </div>
             </OverlayCard>
           )}
 
-          {showLeaderboard && (
-            <OverlayCard>
-              <div className="mb-3 flex w-full max-w-2xl items-center justify-between gap-3">
-                <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/80">Daily leaderboard</p>
-                <button
-                  onClick={() => setShowLeaderboard(false)}
-                  className="rounded-full border border-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-200 transition hover:bg-white/10"
-                >
-                  Close
-                </button>
-              </div>
+          {pageView === 'leaderboard' && (
+            <PageSection
+              title="Daily leaderboard"
+              onBack={() => setPageView('home')}
+            >
               <LeaderboardTable entries={leaderboardEntries} onOpenReplay={openReplay} />
-            </OverlayCard>
+            </PageSection>
           )}
 
-          {showStats && (
-            <OverlayCard>
-              <div className="mb-3 flex w-full max-w-2xl items-center justify-between gap-3">
-                <p className="text-xs uppercase tracking-[0.35em] text-emerald-300/80">Player stats</p>
-                <button
-                  onClick={() => setShowStats(false)}
-                  className="rounded-full border border-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-200 transition hover:bg-white/10"
-                >
-                  Close
-                </button>
-              </div>
+          {pageView === 'stats' && (
+            <PageSection
+              title="Player stats"
+              onBack={() => setPageView('home')}
+            >
               <StatsPanel playerStats={playerStats} />
-            </OverlayCard>
+            </PageSection>
           )}
 
-          {showSettings && (
-            <OverlayCard>
-              <div className="mb-3 flex w-full max-w-2xl items-center justify-between gap-3">
-                <p className="text-xs uppercase tracking-[0.35em] text-cyan-300/80">Accessibility and feedback</p>
-                <button
-                  onClick={() => setShowSettings(false)}
-                  className="rounded-full border border-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-200 transition hover:bg-white/10"
-                >
-                  Close
-                </button>
-              </div>
+          {pageView === 'settings' && (
+            <PageSection
+              title="Accessibility and feedback"
+              onBack={() => setPageView('home')}
+            >
               <SettingsPanel settings={settings} setSettings={setSettings} />
-            </OverlayCard>
+            </PageSection>
           )}
 
-          {showReplay && (
-            <OverlayCard>
-              <div className="mb-3 flex w-full max-w-3xl items-center justify-between gap-3">
-                <p className="text-xs uppercase tracking-[0.35em] text-amber-300/80">Replay viewer</p>
-                <button
-                  onClick={() => setShowReplay(false)}
-                  className="rounded-full border border-white/15 px-4 py-2 text-xs font-semibold uppercase tracking-[0.3em] text-slate-200 transition hover:bg-white/10"
-                >
-                  Close
-                </button>
-              </div>
+          {pageView === 'replay' && (
+            <PageSection
+              title="Replay viewer"
+              onBack={() => setPageView('home')}
+            >
               {replayLoading ? (
-                <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-slate-950/45 p-6 text-sm text-slate-300">
+                <div className="surface-panel w-full max-w-3xl rounded-[26px] p-6 text-sm ink-muted">
                   Loading replay...
                 </div>
               ) : (
-                <ReplayPanel replay={activeReplay} error={replayError} />
+                <ReplayPanel key={replayPanelKey} replay={activeReplay} error={replayError} />
               )}
-            </OverlayCard>
+            </PageSection>
           )}
         </main>
       </div>
@@ -697,9 +618,9 @@ type HudStatProps = {
 };
 
 const HudStat = ({ label, value, accent }: HudStatProps) => (
-  <div className="rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-3 backdrop-blur">
-    <div className="text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">{label}</div>
-    <div className={`mt-1 font-mono text-2xl font-semibold ${accent}`}>{value}</div>
+  <div className="surface-panel motion-soft rounded-[22px] px-4 py-3">
+    <div className="label-kicker">{label}</div>
+    <div className={`numeric mt-2 text-2xl font-semibold ${accent}`}>{value}</div>
   </div>
 );
 
@@ -707,36 +628,51 @@ type ResultStatProps = {
   label: string;
   value: string;
   accent: string;
+  icon?: ReactNode;
 };
 
-const ResultStat = ({ label, value, accent }: ResultStatProps) => (
-  <div className="rounded-2xl border border-white/10 bg-slate-950/45 p-4 text-center">
-    <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">{label}</div>
-    <div className={`font-mono text-3xl font-semibold ${accent}`}>{value}</div>
+const ResultStat = ({ label, value, accent, icon }: ResultStatProps) => (
+  <div className="surface-panel rounded-[24px] p-4 text-left">
+    <div className="flex items-center gap-2">
+      {icon}
+      <div className="label-kicker">{label}</div>
+    </div>
+    <div className={`numeric mt-3 text-3xl font-semibold ${accent}`}>{value}</div>
   </div>
 );
 
-const CompactStat = ({ label, value, accent }: ResultStatProps) => (
-  <div className="rounded-2xl border border-white/10 bg-slate-950/35 p-4 text-center">
-    <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-slate-500">{label}</div>
-    <div className={`font-mono text-xl font-semibold ${accent}`}>{value}</div>
+const CompactStat = ({ label, value, accent, icon }: ResultStatProps) => (
+  <div className="rounded-[20px] border soft-divider bg-white/34 p-4 text-left">
+    <div className="flex items-center gap-2">
+      {icon}
+      <div className="label-kicker">{label}</div>
+    </div>
+    <div className={`numeric mt-2 text-xl font-semibold ${accent}`}>{value}</div>
   </div>
+);
+
+const TinyIcon = ({ children }: { children: ReactNode }) => (
+  <span className="seal-mark h-7 w-7 text-[11px]">{children}</span>
 );
 
 const SubmissionBanner = ({ submissionState }: { submissionState: SubmissionState }) => {
   if (submissionState.status === 'idle') return null;
   if (submissionState.status === 'submitting') {
-    return <p className="text-sm text-cyan-200">Submitting official run to the server...</p>;
+    return <p className="text-sm accent-mist">Submitting official run to the server...</p>;
   }
   if (submissionState.status === 'accepted') {
     return (
-      <p className="text-sm text-emerald-200">
+      <p className="rounded-[20px] border soft-divider bg-white/35 px-4 py-3 text-sm accent-moss">
         Official run accepted{submissionState.rank ? `, current rank ${submissionState.rank}.` : '.'}
         {!submissionState.replayAvailable ? ' Replay storage unavailable for this run.' : ''}
       </p>
     );
   }
-  return <p className="text-sm text-rose-200">Official submission rejected: {submissionState.reason}</p>;
+  return (
+    <p className="rounded-[20px] border soft-divider bg-white/35 px-4 py-3 text-sm accent-warm">
+      Official submission rejected: {submissionState.reason}
+    </p>
+  );
 };
 
 const PersonalBestBanner = ({ submissionState }: { submissionState: SubmissionState }) => {
@@ -767,49 +703,7 @@ const PersonalBestBanner = ({ submissionState }: { submissionState: SubmissionSt
 
   if (messages.length === 0) return null;
 
-  return <p className="mt-3 max-w-lg text-sm text-amber-200">{messages.join(' ')}</p>;
-};
-
-const LeaderboardPreview = ({
-  entries,
-  onOpenReplay,
-}: {
-  entries: LeaderboardEntry[];
-  onOpenReplay: (username: string) => void;
-}) => {
-  if (entries.length === 0) {
-    return <p className="text-sm text-slate-400">No ranked runs submitted yet today.</p>;
-  }
-
-  return (
-    <div className="w-full max-w-xl overflow-hidden rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-      <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500">
-        Top today
-      </div>
-      <div className="space-y-2">
-        {entries.map((entry) => (
-          <div
-            key={`${entry.rank}-${entry.username}`}
-            className={`flex min-w-0 items-center gap-3 rounded-xl px-3 py-2 text-sm ${
-              entry.isCurrentUser ? 'bg-cyan-400/10 text-cyan-100' : 'bg-white/5 text-slate-200'
-            }`}
-          >
-            <span className="w-11 shrink-0 font-mono text-slate-400">#{entry.rank}</span>
-            <span className="min-w-0 flex-1 truncate text-left">{entry.username}</span>
-            <span className="shrink-0 text-right font-mono text-amber-200">{entry.score}</span>
-            {entry.hasReplay && (
-              <button
-                onClick={() => onOpenReplay(entry.username)}
-                className="shrink-0 rounded-full border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-amber-100 transition hover:bg-amber-300/20"
-              >
-                Replay
-              </button>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  return <p className="rounded-[20px] border soft-divider bg-white/35 px-4 py-3 text-sm accent-gold">{messages.join(' ')}</p>;
 };
 
 const LeaderboardTable = ({
@@ -821,15 +715,15 @@ const LeaderboardTable = ({
 }) => {
   if (entries.length === 0) {
     return (
-      <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-950/45 p-4">
-        <div className="px-3 py-6 text-center text-sm text-slate-400">No submissions yet.</div>
+      <div className="surface-panel w-full max-w-3xl rounded-[26px] p-4">
+        <div className="px-3 py-6 text-center text-sm ink-muted">No submissions yet.</div>
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-950/45 p-3 sm:p-4">
-      <div className="hidden grid-cols-[56px_minmax(0,1fr)_120px_90px] gap-3 px-3 text-[11px] font-semibold uppercase tracking-[0.3em] text-slate-500 md:grid">
+    <div className="surface-panel w-full max-w-3xl rounded-[26px] p-3 sm:p-4">
+      <div className="label-kicker hidden grid-cols-[56px_minmax(0,1fr)_120px_90px] gap-3 px-3 md:grid">
         <span>Rank</span>
         <span>Player</span>
         <span className="text-right">Score</span>
@@ -840,23 +734,23 @@ const LeaderboardTable = ({
         {entries.map((entry) => (
           <article
             key={`${entry.rank}-${entry.username}`}
-            className={`rounded-2xl border px-3 py-3 text-sm ${
+            className={`rounded-[20px] border px-3 py-2.5 text-sm ${
               entry.isCurrentUser
-                ? 'border-cyan-300/30 bg-cyan-400/10 text-cyan-100'
-                : 'border-white/8 bg-white/5 text-slate-200'
+                ? 'border-[rgba(160,79,55,0.26)] bg-[rgba(160,79,55,0.08)] text-[rgb(41,35,29)]'
+                : 'border-[rgba(191,180,164,0.55)] bg-white/36 text-[rgb(41,35,29)]'
             }`}
           >
             <div className="flex items-start justify-between gap-3 md:hidden">
               <div className="min-w-0">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.28em] text-slate-500">Player</div>
+                <div className="label-kicker">Player</div>
                 <div className="mt-1 truncate text-base font-semibold">{entry.username}</div>
               </div>
-              <div className="shrink-0 rounded-full border border-white/10 px-3 py-1 font-mono text-xs text-slate-300">
+              <div className="numeric shrink-0 rounded-full border soft-divider px-3 py-1 text-xs ink-muted">
                 #{entry.rank}
               </div>
             </div>
 
-            <div className="mt-3 grid grid-cols-2 gap-3 md:hidden">
+            <div className="mt-2.5 grid grid-cols-2 gap-3 md:hidden">
               <MobileLeaderboardStat label="Score" value={entry.score.toString()} accent="text-amber-200" />
               <MobileLeaderboardStat
                 label="Puzzles"
@@ -865,10 +759,10 @@ const LeaderboardTable = ({
               />
             </div>
             {entry.hasReplay && (
-              <div className="mt-3 md:hidden">
+              <div className="mt-2.5 md:hidden">
                 <button
                   onClick={() => onOpenReplay(entry.username)}
-                  className="w-full rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-center text-[11px] font-semibold uppercase tracking-[0.26em] text-amber-100 transition hover:bg-amber-300/20"
+                  className="action-button action-subtle w-full py-2 text-center text-[11px]"
                 >
                   Watch Replay
                 </button>
@@ -876,14 +770,14 @@ const LeaderboardTable = ({
             )}
 
             <div className="hidden min-w-0 grid-cols-[56px_minmax(0,1fr)_120px_90px] items-center gap-3 md:grid">
-              <span className="font-mono text-slate-400">#{entry.rank}</span>
+              <span className="numeric ink-muted">#{entry.rank}</span>
               <span className="truncate">{entry.username}</span>
-              <span className="text-right font-mono text-amber-200">{entry.score}</span>
-              <span className="text-right font-mono">{entry.puzzlesSolved}</span>
+              <span className="numeric text-right accent-warm">{entry.score}</span>
+              <span className="numeric text-right">{entry.puzzlesSolved}</span>
               {entry.hasReplay && (
                 <button
                   onClick={() => onOpenReplay(entry.username)}
-                  className="col-span-4 rounded-xl border border-amber-300/20 bg-amber-300/10 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-amber-100 transition hover:bg-amber-300/20"
+                  className="action-button action-subtle col-span-4 py-2 text-[11px]"
                 >
                   Watch Replay
                 </button>
@@ -905,44 +799,47 @@ const MobileLeaderboardStat = ({
   value: string;
   accent: string;
 }) => (
-  <div className="rounded-xl border border-white/10 bg-slate-950/35 p-3 text-left">
-    <div className="text-[10px] font-semibold uppercase tracking-[0.24em] text-slate-500">{label}</div>
-    <div className={`mt-1 font-mono text-lg font-semibold ${accent}`}>{value}</div>
+  <div className="rounded-[18px] border soft-divider bg-white/34 p-3 text-left">
+    <div className="label-kicker">{label}</div>
+    <div className={`numeric mt-2 text-lg font-semibold ${accent}`}>{value}</div>
   </div>
 );
 
 const StatsPanel = ({ playerStats }: { playerStats: PlayerStats | null }) => {
   if (!playerStats) {
     return (
-      <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-950/45 p-6 text-sm text-slate-400">
+      <div className="surface-panel w-full max-w-3xl rounded-[26px] p-6 text-sm ink-muted">
         No official stats yet. Submit an official run to start your streak.
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-950/45 p-4 sm:p-6">
+    <div className="surface-panel w-full max-w-3xl rounded-[26px] p-4 sm:p-6">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <CompactStat label="Current Streak" value={playerStats.currentStreak.toString()} accent="text-cyan-200" />
-        <CompactStat label="Longest Streak" value={playerStats.longestStreak.toString()} accent="text-emerald-200" />
-        <CompactStat label="Best Score" value={playerStats.bestScore.toString()} accent="text-amber-200" />
+        <CompactStat label="Current Streak" value={playerStats.currentStreak.toString()} accent="accent-moss" icon={<TinyIcon>日</TinyIcon>} />
+        <CompactStat label="Longest Streak" value={playerStats.longestStreak.toString()} accent="accent-gold" icon={<TinyIcon>長</TinyIcon>} />
+        <CompactStat label="Best Score" value={playerStats.bestScore.toString()} accent="accent-warm" icon={<TinyIcon>点</TinyIcon>} />
         <CompactStat
           label="Best Rank"
           value={playerStats.bestRank ? `#${playerStats.bestRank}` : '-'}
-          accent="text-fuchsia-200"
+          accent="accent-mist"
+          icon={<TinyIcon>位</TinyIcon>}
         />
         <CompactStat
           label="Highest Puzzle"
           value={playerStats.highestPuzzleReached.toString()}
-          accent="text-cyan-200"
+          accent="accent-moss"
+          icon={<TinyIcon>段</TinyIcon>}
         />
         <CompactStat
           label="Official Runs"
           value={playerStats.totalOfficialRuns.toString()}
-          accent="text-emerald-200"
+          accent="accent-gold"
+          icon={<TinyIcon>走</TinyIcon>}
         />
       </div>
-      <div className="mt-3 rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-left text-sm text-slate-300">
+      <div className="mt-3 rounded-[22px] border soft-divider bg-white/32 p-4 text-left text-sm ink-muted">
         <div>Total puzzles solved: {playerStats.totalPuzzlesSolved}</div>
         <div className="mt-1">Last submission: {playerStats.lastSubmissionDate ?? 'none'}</div>
       </div>
@@ -955,36 +852,40 @@ const SettingsPanel = ({
   setSettings,
 }: {
   settings: GameSettings;
-  setSettings: React.Dispatch<React.SetStateAction<GameSettings>>;
+  setSettings: Dispatch<SetStateAction<GameSettings>>;
 }) => (
-  <div className="w-full max-w-2xl rounded-2xl border border-white/10 bg-slate-950/45 p-4 sm:p-6">
+  <div className="surface-panel w-full max-w-3xl rounded-[26px] p-4 sm:p-6">
     <div className="space-y-3">
       <SettingToggle
         label="Sound"
-        description="Countdown, success, failure, and time-up tones."
+        description="Play game tones."
+        icon={<TinyIcon>音</TinyIcon>}
         checked={settings.soundEnabled}
         onToggle={() => setSettings((current) => ({ ...current, soundEnabled: !current.soundEnabled }))}
       />
       <SettingToggle
         label="Haptics"
-        description="Short vibration feedback on countdown, success, and failure where supported."
+        description="Use vibration feedback where supported."
+        icon={<TinyIcon>触</TinyIcon>}
         checked={settings.hapticsEnabled}
         onToggle={() => setSettings((current) => ({ ...current, hapticsEnabled: !current.hapticsEnabled }))}
       />
       <SettingToggle
         label="Reduced Motion"
-        description="Softens flashes, disables shake, and tones down motion-heavy effects."
+        description="Reduce flashes and shake."
+        icon={<TinyIcon>静</TinyIcon>}
         checked={settings.reducedMotion}
         onToggle={() => setSettings((current) => ({ ...current, reducedMotion: !current.reducedMotion }))}
       />
       <SettingToggle
         label="High Contrast"
-        description="Boosts gameplay contrast for targets, hazards, boundaries, and the line."
+        description="Increase gameplay contrast."
+        icon={<TinyIcon>明</TinyIcon>}
         checked={settings.highContrast}
         onToggle={() => setSettings((current) => ({ ...current, highContrast: !current.highContrast }))}
       />
     </div>
-    <div className="mt-4 rounded-2xl border border-white/10 bg-slate-950/30 p-4 text-left text-sm text-slate-300">
+    <div className="mt-4 rounded-[22px] border soft-divider bg-white/32 p-4 text-left text-sm ink-muted">
       Settings apply immediately and stay saved on this device.
     </div>
   </div>
@@ -996,11 +897,6 @@ const ReplayPanel = ({ replay, error }: { replay: ReplayData | null; error?: str
   const [playing, setPlaying] = useState(true);
 
   const timeline = useMemo(() => (replay ? buildReplayTimeline(replay) : null), [replay]);
-
-  useEffect(() => {
-    setPlaybackMs(0);
-    setPlaying(true);
-  }, [replay]);
 
   useEffect(() => {
     if (!timeline || !playing) return;
@@ -1036,7 +932,7 @@ const ReplayPanel = ({ replay, error }: { replay: ReplayData | null; error?: str
 
   if (error) {
     return (
-      <div className="w-full max-w-3xl rounded-2xl border border-rose-400/30 bg-slate-950/45 p-6 text-sm text-rose-200">
+      <div className="surface-panel w-full max-w-3xl rounded-[26px] p-6 text-sm accent-warm">
         {error}
       </div>
     );
@@ -1044,47 +940,40 @@ const ReplayPanel = ({ replay, error }: { replay: ReplayData | null; error?: str
 
   if (!replay || !timeline) {
     return (
-      <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-slate-950/45 p-6 text-sm text-slate-300">
+      <div className="surface-panel w-full max-w-3xl rounded-[26px] p-6 text-sm ink-muted">
         Replay unavailable for this run.
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-3xl rounded-2xl border border-white/10 bg-slate-950/45 p-4 sm:p-6">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 text-left">
-        <div>
-          <div className="text-xs uppercase tracking-[0.3em] text-slate-500">{replay.username}</div>
-          <div className="mt-1 text-2xl font-semibold text-white">{replay.score} pts</div>
+    <div className="surface-panel w-full max-w-3xl rounded-[26px] p-4 sm:p-6">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3 text-left">
+        <div className="min-w-0">
+          <div className="label-kicker">{replay.username}</div>
+          <div className="display-title mt-2 text-2xl">{replay.score} pts</div>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <CompactStat label="Rank" value={replay.rank ? `#${replay.rank}` : '-'} accent="text-amber-200" />
-          <CompactStat label="Puzzles" value={replay.puzzlesSolved.toString()} accent="text-cyan-200" />
+        <div className="flex flex-wrap items-center gap-2 text-sm ink-muted">
+          <span className="rounded-full border soft-divider px-3 py-1">
+            Rank <span className="numeric accent-warm">{replay.rank ? `#${replay.rank}` : '-'}</span>
+          </span>
+          <span className="rounded-full border soft-divider px-3 py-1">
+            Puzzles <span className="numeric accent-moss">{replay.puzzlesSolved}</span>
+          </span>
         </div>
       </div>
       <canvas
         ref={canvasRef}
         width={600}
         height={400}
-        className="aspect-[3/2] w-full rounded-2xl border border-cyan-200/10 bg-[#0f172a]"
+        className="aspect-[3/2] w-full rounded-[24px] border soft-divider bg-[#f4efe5]"
       />
-      <div className="mt-4 flex flex-wrap items-center gap-3">
-        <button
-          onClick={() => setPlaying((current) => !current)}
-          className="rounded-full border border-white/15 bg-white/5 px-5 py-2 text-sm font-semibold uppercase tracking-[0.28em] text-slate-100 transition hover:bg-white/10"
-        >
-          {playing ? 'Pause' : 'Play'}
-        </button>
-        <button
-          onClick={() => {
-            setPlaybackMs(0);
-            setPlaying(true);
-          }}
-          className="rounded-full border border-cyan-300/25 bg-cyan-400/10 px-5 py-2 text-sm font-semibold uppercase tracking-[0.28em] text-cyan-100 transition hover:bg-cyan-400/20"
-        >
-          Restart
-        </button>
-        <div className="min-w-0 flex-1">
+      <div className="mt-4 rounded-[22px] border soft-divider bg-white/34 p-4">
+        <div className="mb-2 flex items-center justify-between gap-3 text-sm ink-muted">
+          <span>{playing ? 'Playing replay' : 'Replay paused'}</span>
+          <span className="numeric">{formatReplayTime(playbackMs)} / {formatReplayTime(timeline.totalDurationMs)}</span>
+        </div>
+        <div>
           <input
             type="range"
             min={0}
@@ -1094,10 +983,26 @@ const ReplayPanel = ({ replay, error }: { replay: ReplayData | null; error?: str
               setPlaybackMs(Number(event.target.value));
               setPlaying(false);
             }}
-            className="w-full"
+            className="range-elegant w-full"
           />
         </div>
-        <div className="font-mono text-sm text-slate-300">{formatReplayTime(playbackMs)} / {formatReplayTime(timeline.totalDurationMs)}</div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <button
+            onClick={() => setPlaying((current) => !current)}
+            className="action-button action-primary px-5 py-2 text-sm"
+          >
+            {playing ? 'Pause' : 'Play'}
+          </button>
+          <button
+            onClick={() => {
+              setPlaybackMs(0);
+              setPlaying(true);
+            }}
+            className="action-button action-secondary px-5 py-2 text-sm"
+          >
+            Restart
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -1109,7 +1014,7 @@ function drawReplayFrame(
   playbackMs: number
 ) {
   context.clearRect(0, 0, 600, 400);
-  context.fillStyle = '#0f172a';
+  context.fillStyle = '#f4efe5';
   context.fillRect(0, 0, 600, 400);
 
   const activeSegment = timeline.segments.find((segment) => {
@@ -1164,7 +1069,7 @@ function drawReplayFrame(
             const progress = ageMs / 400;
             const radius = target.r + progress * 20;
             const alpha = 1 - Math.pow(progress, 2);
-            context.strokeStyle = `rgba(253, 224, 71, ${alpha})`;
+            context.strokeStyle = `rgba(194, 147, 48, ${alpha})`;
             context.lineWidth = 2;
             context.beginPath();
             context.arc(target.x, target.y, radius, 0, Math.PI * 2);
@@ -1179,7 +1084,7 @@ function drawReplayFrame(
         const ageMs = (step - activeSegment.resultStep) * REPLAY_STEP_MS;
         if (ageMs < 1000) {
           const alpha = 1 - (ageMs / 1000);
-          context.fillStyle = `rgba(225, 29, 72, ${alpha * 0.6})`;
+          context.fillStyle = `rgba(157, 63, 37, ${alpha * 0.45})`;
           context.beginPath();
           context.arc(headPos.x, headPos.y, 25 + (ageMs / 40), 0, Math.PI * 2);
           context.fill();
@@ -1188,7 +1093,7 @@ function drawReplayFrame(
         const ageMs = (step - activeSegment.resultStep) * REPLAY_STEP_MS;
         if (ageMs < 1000) {
           const alpha = 1 - (ageMs / 1000);
-          context.fillStyle = `rgba(52, 211, 153, ${alpha * 0.5})`;
+          context.fillStyle = `rgba(88, 128, 96, ${alpha * 0.35})`;
           context.beginPath();
           context.arc(headPos.x, headPos.y, 30 + (ageMs / 30), 0, Math.PI * 2);
           context.fill();
@@ -1199,7 +1104,7 @@ function drawReplayFrame(
 }
 
 function drawReplayBounds(context: CanvasRenderingContext2D) {
-  context.strokeStyle = '#314158';
+  context.strokeStyle = '#8f8477';
   context.lineWidth = 2;
   context.beginPath();
   context.moveTo(0, 2);
@@ -1211,16 +1116,16 @@ function drawReplayBounds(context: CanvasRenderingContext2D) {
 
 function drawReplayHazards(context: CanvasRenderingContext2D, hazards: Array<{ x: number; y: number; r: number }>) {
   for (const hazard of hazards) {
-    context.fillStyle = '#020617';
+    context.fillStyle = '#d6cab9';
     context.beginPath();
     context.arc(hazard.x, hazard.y, hazard.r + 6, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = '#334155';
+    context.strokeStyle = '#65584c';
     context.lineWidth = 2;
     context.beginPath();
     context.arc(hazard.x, hazard.y, hazard.r + 3, 0, Math.PI * 2);
     context.stroke();
-    context.fillStyle = '#000000';
+    context.fillStyle = '#161311';
     context.beginPath();
     context.arc(hazard.x, hazard.y, hazard.r, 0, Math.PI * 2);
     context.fill();
@@ -1229,15 +1134,15 @@ function drawReplayHazards(context: CanvasRenderingContext2D, hazards: Array<{ x
 
 function drawReplayTargets(context: CanvasRenderingContext2D, targets: Array<{ x: number; y: number; r: number }>) {
   for (const target of targets) {
-    context.fillStyle = 'rgba(103, 232, 249, 0.2)';
+    context.fillStyle = 'rgba(234, 215, 194, 0.58)';
     context.beginPath();
     context.arc(target.x, target.y, target.r + 8, 0, Math.PI * 2);
     context.fill();
-    context.fillStyle = '#38bdf8';
+    context.fillStyle = '#b84a29';
     context.beginPath();
     context.arc(target.x, target.y, target.r, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = '#e0f2fe';
+    context.strokeStyle = '#fffaf3';
     context.lineWidth = 2;
     context.beginPath();
     context.arc(target.x, target.y, target.r - 4, 0, Math.PI * 2);
@@ -1248,7 +1153,7 @@ function drawReplayTargets(context: CanvasRenderingContext2D, targets: Array<{ x
 function drawReplayLine(context: CanvasRenderingContext2D, path: Point[]) {
   if (path.length < 2) return;
 
-  context.strokeStyle = 'rgba(103, 232, 249, 0.18)';
+  context.strokeStyle = 'rgba(205, 182, 157, 0.42)';
   context.lineWidth = 10;
   context.lineJoin = 'round';
   context.lineCap = 'round';
@@ -1259,7 +1164,7 @@ function drawReplayLine(context: CanvasRenderingContext2D, path: Point[]) {
   }
   context.stroke();
 
-  context.strokeStyle = '#f8fafc';
+  context.strokeStyle = '#29231d';
   context.lineWidth = 6;
   context.beginPath();
   context.moveTo(path[0]!.x, path[0]!.y);
@@ -1311,27 +1216,34 @@ const SettingToggle = ({
   description,
   checked,
   onToggle,
+  icon,
 }: {
   label: string;
   description: string;
   checked: boolean;
   onToggle: () => void;
+  icon?: ReactNode;
 }) => (
   <button
     onClick={onToggle}
-    className="flex w-full items-center justify-between gap-4 rounded-2xl border border-white/10 bg-slate-950/35 px-4 py-4 text-left transition hover:bg-slate-900/60"
+    className="flex w-full items-center justify-between gap-4 rounded-[22px] border soft-divider bg-white/34 px-4 py-4 text-left transition hover:bg-white/50"
   >
     <div className="min-w-0">
-      <div className="text-sm font-semibold uppercase tracking-[0.28em] text-slate-100">{label}</div>
-      <div className="mt-1 text-sm text-slate-400">{description}</div>
+      <div className="flex items-center gap-2">
+        {icon}
+        <div className="label-kicker">{label}</div>
+      </div>
+      <div className="mt-2 text-sm ink-muted">{description}</div>
     </div>
     <div
       className={`relative h-8 w-14 shrink-0 rounded-full border transition ${
-        checked ? 'border-cyan-300/50 bg-cyan-400/30' : 'border-white/10 bg-white/10'
+        checked
+          ? 'border-[rgba(160,79,55,0.45)] bg-[rgba(160,79,55,0.22)]'
+          : 'border-[rgba(191,180,164,0.8)] bg-white/30'
       }`}
     >
       <div
-        className={`absolute top-1 h-6 w-6 rounded-full bg-white transition ${
+        className={`absolute top-1 h-6 w-6 rounded-full bg-[rgb(251,248,242)] transition ${
           checked ? 'left-7' : 'left-1'
         }`}
       />
@@ -1340,11 +1252,38 @@ const SettingToggle = ({
 );
 
 const OverlayCard = ({ children }: { children: ReactNode }) => (
-  <div className="absolute inset-0 overflow-y-auto overflow-x-hidden rounded-[24px] bg-slate-950/72 px-4 py-5 text-center backdrop-blur-md sm:px-6 sm:py-6">
-    <div className="flex min-h-full flex-col items-center justify-start sm:justify-center">
+  <div className="surface-overlay absolute inset-0 overflow-y-auto overflow-x-hidden rounded-[30px] px-4 py-5 sm:px-6 sm:py-6">
+    <div className="mx-auto flex min-h-full w-full max-w-5xl flex-col items-stretch justify-start">
       {children}
     </div>
   </div>
+);
+
+const PageSection = ({
+  title,
+  onBack,
+  children,
+}: {
+  title: string;
+  onBack: () => void;
+  children: ReactNode;
+}) => (
+  <section className="motion-rise flex flex-1 flex-col">
+    <div className="mb-4 flex items-center justify-between gap-3">
+      <div>
+        <div className="title-divider">
+          <span className="seal-mark text-[10px]">印</span>
+          <p className="label-kicker">{title}</p>
+        </div>
+      </div>
+      <button onClick={onBack} className="action-button action-subtle px-4 py-2">
+        Back
+      </button>
+    </div>
+    <div className="flex flex-1 flex-col items-center">
+      {children}
+    </div>
+  </section>
 );
 
 createRoot(document.getElementById('root')!).render(

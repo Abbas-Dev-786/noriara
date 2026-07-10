@@ -298,6 +298,7 @@ function simulateAttempt(
   const activeTargets = targets.map((target) => ({ ...target }));
   const snakePath = [...baseGesture];
   const snakeLength = baseGesture.length;
+  const collisionStartBaseIndex = baseGesture.length - 1;
   let headIndex = baseGesture.length - 1;
   let yDir = 1;
 
@@ -316,9 +317,10 @@ function simulateAttempt(
     snakePath[headIndex] = bounced.point;
 
     const tailIndex = Math.max(0, headIndex - snakeLength + 1);
+    const collisionStartIndex = Math.max(tailIndex, collisionStartBaseIndex);
     let hazardHit = false;
 
-    for (let i = tailIndex; i < headIndex; i++) {
+    for (let i = collisionStartIndex; i < headIndex; i++) {
       const s1 = snakePath[i] as Point;
       const s2 = snakePath[i + 1] as Point;
 
