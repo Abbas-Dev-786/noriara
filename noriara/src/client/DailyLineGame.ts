@@ -74,6 +74,16 @@ type FailureEffect = {
   maxAge: number;
 };
 
+type ParticleEffect = {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  age: number;
+  maxAge: number;
+  color: number;
+};
+
 type PendingAttempt = {
   puzzleIndex: number;
   startedAtMs: number;
@@ -117,6 +127,7 @@ class DailyLineScene extends Phaser.Scene {
   private activeTargets: PuzzleShape[] = [];
   private popEffects: PopEffect[] = [];
   private failureEffect: FailureEffect | null = null;
+  private particles: ParticleEffect[] = [];
   private currentAttemptStartMs = 0;
   private pendingAttempt: PendingAttempt | null = null;
   private attempts: GestureAttempt[] = [];
@@ -165,7 +176,7 @@ class DailyLineScene extends Phaser.Scene {
     this.activeCountdownText = this.add
       .text(this.cameras.main.centerX, this.cameras.main.centerY, '3', {
         fontSize: '64px',
-        color: '#ffffff',
+        color: '#1e293b',
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
@@ -239,6 +250,7 @@ class DailyLineScene extends Phaser.Scene {
     this.activePointerId = null;
     this.failureEffect = null;
     this.popEffects = [];
+    this.particles = [];
     this.flashAlpha = 0;
   }
 
@@ -249,11 +261,22 @@ class DailyLineScene extends Phaser.Scene {
     this.graphics.fillStyle(palette.background, 1);
     this.graphics.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
+    this.drawGrid();
     this.drawBounceBoundaries();
     this.drawHazards();
     this.drawTargets();
     this.drawLine();
     this.drawEffects();
+  }
+
+  private drawGrid() {
+    const palette = this.getPalette();
+    this.graphics.fillStyle(palette.boundary, this.settings.highContrast ? 0.3 : 0.15);
+    for (let x = 20; x < GAME_WIDTH; x += 20) {
+      for (let y = 20; y < GAME_HEIGHT; y += 20) {
+        this.graphics.fillRect(x - 1, y - 1, 2, 2);
+      }
+    }
   }
 
   private drawBounceBoundaries() {
@@ -284,13 +307,15 @@ class DailyLineScene extends Phaser.Scene {
 
   private drawTargets() {
     const palette = this.getPalette();
+    const pulseScale = this.settings.reducedMotion ? 1 : 1 + Math.sin(this.time.now / 150) * 0.08;
+    
     for (const target of this.activeTargets) {
       this.graphics.fillStyle(palette.targetGlow, this.settings.highContrast ? 0.32 : 0.2);
-      this.graphics.fillCircle(target.x, target.y, target.r + 8);
+      this.graphics.fillCircle(target.x, target.y, (target.r + 8) * pulseScale);
       this.graphics.fillStyle(palette.targetFill, 1);
-      this.graphics.fillCircle(target.x, target.y, target.r);
+      this.graphics.fillCircle(target.x, target.y, target.r * pulseScale);
       this.graphics.lineStyle(this.settings.highContrast ? 3 : 2, palette.targetRing, 0.95);
-      this.graphics.strokeCircle(target.x, target.y, target.r - 4);
+      this.graphics.strokeCircle(target.x, target.y, (target.r - 4) * pulseScale);
     }
   }
 
@@ -307,7 +332,9 @@ class DailyLineScene extends Phaser.Scene {
     if (pathToRender.length < 2) return;
 
     const palette = this.getPalette();
-    this.graphics.lineStyle(LINE_WIDTH + (this.settings.highContrast ? 5 : 4), palette.lineGlow, this.settings.highContrast ? 0.34 : 0.15);
+
+    // Outer glow pass — subtle shadow
+    this.graphics.lineStyle(LINE_WIDTH + (this.settings.highContrast ? 5 : 4), palette.lineGlow, this.settings.highContrast ? 0.34 : 0.12);
     this.graphics.beginPath();
     this.graphics.moveTo(pathToRender[0]!.x, pathToRender[0]!.y);
     for (let i = 1; i < pathToRender.length; i++) {
@@ -316,6 +343,7 @@ class DailyLineScene extends Phaser.Scene {
     }
     this.graphics.strokePath();
 
+    // Core line
     this.graphics.lineStyle(this.settings.highContrast ? LINE_WIDTH + 1 : LINE_WIDTH, palette.lineCore, 1);
     this.graphics.beginPath();
     this.graphics.moveTo(pathToRender[0]!.x, pathToRender[0]!.y);
@@ -324,10 +352,32 @@ class DailyLineScene extends Phaser.Scene {
       this.graphics.lineTo(point.x, point.y);
     }
     this.graphics.strokePath();
+
+    // Draw round caps at start and end
+    const headPt = pathToRender[pathToRender.length - 1]!;
+    const tailPt = pathToRender[0]!;
+    const halfW = (this.settings.highContrast ? LINE_WIDTH + 1 : LINE_WIDTH) / 2;
+    this.graphics.fillStyle(palette.lineCore, 1);
+    this.graphics.fillCircle(tailPt.x, tailPt.y, halfW);
+    this.graphics.fillCircle(headPt.x, headPt.y, halfW);
+
+    // Head glow during locomotion
+    if (this.state === 'locomotion' && !this.settings.reducedMotion) {
+      const headPulse = 1 + Math.sin(this.time.now / 100) * 0.15;
+      this.graphics.fillStyle(palette.lineGlow, 0.45);
+      this.graphics.fillCircle(headPt.x, headPt.y, LINE_WIDTH * 1.4 * headPulse);
+    }
   }
 
   private drawEffects() {
     const palette = this.getPalette();
+    
+    for (const p of this.particles) {
+      const alpha = 1 - (p.age / p.maxAge);
+      this.graphics.fillStyle(p.color, alpha);
+      this.graphics.fillCircle(p.x, p.y, 3);
+    }
+
     for (const pop of this.popEffects) {
       const progress = pop.age / pop.maxAge;
       const radius = 10 + progress * 18;
@@ -378,7 +428,7 @@ class DailyLineScene extends Phaser.Scene {
 
     const previous = this.rawPath[this.rawPath.length - 1] as Point;
     const next = { x: pointer.x, y: pointer.y };
-    if (Phaser.Math.Distance.Between(previous.x, previous.y, next.x, next.y) < 2) return;
+    if (Phaser.Math.Distance.Between(previous.x, previous.y, next.x, next.y) < 1.5) return;
 
     this.rawPath.push(next);
     this.rawPointSamples.push({
@@ -386,7 +436,7 @@ class DailyLineScene extends Phaser.Scene {
       y: next.y,
       t: this.time.now - this.runStartTime,
     });
-    this.displayPath = smoothPath(this.rawPath, 1);
+    this.displayPath = smoothPath(this.rawPath, 2);
     this.renderScene();
   }
 
@@ -429,13 +479,28 @@ class DailyLineScene extends Phaser.Scene {
   }
 
   private registerTargetPop(target: PuzzleShape) {
-    if (this.settings.reducedMotion) return;
-    this.popEffects.push({
-      x: target.x,
-      y: target.y,
-      age: 0,
-      maxAge: 220,
-    });
+    if (!this.settings.reducedMotion) {
+      this.popEffects.push({
+        x: target.x,
+        y: target.y,
+        age: 0,
+        maxAge: 220,
+      });
+
+      for (let i = 0; i < 8; i++) {
+        const angle = (Math.PI * 2 * i) / 8 + Math.random() * 0.2;
+        const speed = 60 + Math.random() * 40;
+        this.particles.push({
+          x: target.x,
+          y: target.y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          age: 0,
+          maxAge: 400 + Math.random() * 200,
+          color: this.getPalette().targetFill,
+        });
+      }
+    }
     this.playTone(880, 0.06, 0.02);
     this.vibrate(16);
   }
@@ -496,6 +561,24 @@ class DailyLineScene extends Phaser.Scene {
     this.playTone(780, 0.12, 0.025, 55);
     this.vibrate(18);
     this.callbacks.onScoreChange(this.score, this.combo);
+
+    if (!this.settings.reducedMotion) {
+      const scoreText = this.add.text(GAME_WIDTH / 2, GAME_HEIGHT / 2, `+${result.totalScore}`, {
+        fontSize: '36px',
+        color: '#10b981',
+        fontStyle: 'bold',
+        fontFamily: 'Inter',
+      }).setOrigin(0.5);
+
+      this.tweens.add({
+        targets: scoreText,
+        y: GAME_HEIGHT / 2 - 60,
+        alpha: 0,
+        duration: 1200,
+        ease: 'Cubic.easeOut',
+        onComplete: () => scoreText.destroy()
+      });
+    }
 
     this.time.delayedCall(220, () => {
       this.activePuzzleIndex++;
@@ -645,6 +728,15 @@ class DailyLineScene extends Phaser.Scene {
       .map((effect) => ({ ...effect, age: effect.age + delta }))
       .filter((effect) => effect.age < effect.maxAge);
 
+    this.particles = this.particles
+      .map((p) => ({
+        ...p,
+        x: p.x + (p.vx * delta) / 1000,
+        y: p.y + (p.vy * delta) / 1000,
+        age: p.age + delta,
+      }))
+      .filter((p) => p.age < p.maxAge);
+
     if (this.failureEffect) {
       this.failureEffect = {
         ...this.failureEffect,
@@ -690,36 +782,36 @@ class DailyLineScene extends Phaser.Scene {
   private getPalette() {
     if (this.settings.highContrast) {
       return {
-        background: 0xf8f3ea,
-        boundary: 0x1f1b18,
-        hazardAura: 0xf2d7c7,
-        hazardRing: 0x9c3f25,
-        hazardCore: 0x14110f,
-        targetGlow: 0xe7c4aa,
-        targetFill: 0xc45a32,
+        background: 0x050608,
+        boundary: 0xffffff,
+        hazardAura: 0x282c38,
+        hazardRing: 0xffffff,
+        hazardCore: 0x000000,
+        targetGlow: 0xff80a0,
+        targetFill: 0xff2050,
         targetRing: 0xffffff,
-        lineGlow: 0xc9af96,
-        lineCore: 0x1f1b18,
-        pop: 0xcfa134,
-        failureFill: 0x271812,
-        failureRing: 0x9c3f25,
+        lineGlow: 0xffffff,
+        lineCore: 0x000000,
+        pop: 0xffd050,
+        failureFill: 0x000000,
+        failureRing: 0xff0000,
       };
     }
 
     return {
-      background: 0xf4efe5,
-      boundary: 0x8f8477,
-      hazardAura: 0xd6cab9,
-      hazardRing: 0x65584c,
-      hazardCore: 0x161311,
-      targetGlow: 0xead7c2,
-      targetFill: 0xb84a29,
-      targetRing: 0xfffaf3,
-      lineGlow: 0xcdb69d,
-      lineCore: 0x29231d,
-      pop: 0xc29330,
-      failureFill: 0x3b2a24,
-      failureRing: 0x8d442c,
+      background: 0xf8fafc,
+      boundary: 0xcbd5e1,
+      hazardAura: 0xfee2e2,
+      hazardRing: 0xf87171,
+      hazardCore: 0xef4444,
+      targetGlow: 0xc7d2fe,
+      targetFill: 0x6366f1,
+      targetRing: 0xffffff,
+      lineGlow: 0x64748b,
+      lineCore: 0x0f172a,
+      pop: 0x10b981,
+      failureFill: 0xfecaca,
+      failureRing: 0xef4444,
     };
   }
 
@@ -770,7 +862,7 @@ export function createGame(parent: HTMLElement, seed: string, callbacks: GameCal
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
     parent,
-    backgroundColor: '#f4efe5',
+    backgroundColor: '#f8fafc',
     scale: {
       mode: Phaser.Scale.FIT,
       autoCenter: Phaser.Scale.CENTER_BOTH,

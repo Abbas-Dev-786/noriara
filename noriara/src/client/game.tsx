@@ -388,8 +388,11 @@ export const App = () => {
       <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col px-4 py-4 sm:px-6">
         <header className="surface-panel motion-rise mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[24px] px-4 py-3">
           <div className="flex min-w-0 items-center gap-3">
-            <span className="display-title text-xl">Daily Line</span>
-            <span className="hidden h-4 w-px bg-[rgba(191,180,164,0.9)] sm:block" />
+            <div className="flex items-center gap-2">
+              <span className="seal-mark text-[12px]">N</span>
+              <span className="display-title text-xl tracking-widest">Noriara</span>
+            </div>
+            <span className="hidden h-4 w-px bg-[rgba(var(--line-soft-rgb),0.9)] sm:block" />
             <span className="text-sm ink-muted">{dailyDate || 'Loading board'}</span>
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs ink-muted">
@@ -402,9 +405,9 @@ export const App = () => {
         <main className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col">
           {gameState === 'playing' && isHomeView && (
             <div className="motion-soft mb-4 grid grid-cols-3 gap-3">
-              <HudStat label="Time" value={formatTime(timeMs)} accent="accent-warm" />
-              <HudStat label="Score" value={score.toString()} accent="accent-moss" />
-              <HudStat label="Combo" value={`x${combo}`} accent={combo > 1 ? 'accent-gold' : 'ink-muted'} />
+              <HudStat label="⏱ Time" value={formatTime(timeMs)} accent="accent-warm" />
+              <HudStat label="⭐ Score" value={score.toString()} accent="accent-moss" />
+              <HudStat label="⚡ Combo" value={`x${combo}`} accent={combo > 1 ? 'accent-gold' : 'ink-muted'} />
             </div>
           )}
 
@@ -433,7 +436,7 @@ export const App = () => {
 
           <div
             ref={gameRef}
-            className={`surface-panel-strong texture-grid w-full aspect-[3/2] overflow-hidden rounded-[30px] shadow-[0_20px_55px_rgba(63,45,29,0.12)] ${
+            className={`w-full aspect-[3/2] overflow-hidden rounded-[30px] border border-[rgba(var(--line-rgb),0.4)] bg-[rgb(var(--bg-rgb))] shadow-[0_8px_40px_rgba(15,23,42,0.08),inset_0_1px_0_rgba(255,255,255,0.5)] ${
               !isHomeView || gameState === 'bootstrap' || gameState === 'error' ? 'hidden' : 'block'
             }`}
           />
@@ -443,9 +446,9 @@ export const App = () => {
               <div className="motion-rise mx-auto flex w-full max-w-2xl flex-col items-center justify-center text-center">
                 <div className="surface-panel rounded-[28px] px-6 py-8 sm:px-8 sm:py-10">
                   <p className="label-kicker">Today&apos;s run</p>
-                  <h2 className="display-title mt-4 text-4xl sm:text-5xl">Draw. Release. Move.</h2>
+                  <h2 className="display-title brush-stroke mt-4 text-4xl sm:text-5xl">One Stroke</h2>
                   <p className="body-copy mx-auto mt-4 max-w-md text-sm sm:text-base">
-                    One line. Thirty seconds. Same board for everyone.
+                    One stroke. Thirty seconds. The same board for everyone.
                   </p>
 
                   {officialSubmitted && bootstrap.currentRun ? (
@@ -477,15 +480,15 @@ export const App = () => {
                   </div>
 
                   <div className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-3 text-sm ink-muted">
-                    <button onClick={() => void fetchLeaderboard()} className="transition-colors hover:text-[rgb(41,35,29)]">
+                    <button onClick={() => void fetchLeaderboard()} className="transition-colors hover:text-[rgb(var(--ink-rgb))]">
                       Leaderboard
                     </button>
                     {bootstrap.loggedIn && (
-                      <button onClick={() => void fetchStats()} className="transition-colors hover:text-[rgb(41,35,29)]">
+                      <button onClick={() => void fetchStats()} className="transition-colors hover:text-[rgb(var(--ink-rgb))]">
                         Stats
                       </button>
                     )}
-                    <button onClick={() => setPageView('settings')} className="transition-colors hover:text-[rgb(41,35,29)]">
+                    <button onClick={() => setPageView('settings')} className="transition-colors hover:text-[rgb(var(--ink-rgb))]">
                       Settings
                     </button>
                   </div>
@@ -501,17 +504,17 @@ export const App = () => {
                   <p className="label-kicker">
                     {runMode === 'official' ? 'Official run complete' : 'Practice run complete'}
                   </p>
-                  <h2 className="display-title mt-4 text-4xl sm:text-[3rem]">Time&apos;s up</h2>
+                  <h2 className="display-title brush-stroke mt-4 text-4xl sm:text-[3rem]">Time's Up!</h2>
 
                   <div className="mt-6 grid grid-cols-2 gap-4">
-                    <ResultStat label="Final Score" value={finalResult.score.toString()} accent="accent-warm" icon={<TinyIcon>点</TinyIcon>} />
-                    <ResultStat label="Puzzles" value={finalResult.puzzlesSolved.toString()} accent="accent-moss" icon={<TinyIcon>手</TinyIcon>} />
-                    <ResultStat label="Max Combo" value={`x${finalResult.maxCombo}`} accent="accent-gold" icon={<TinyIcon>連</TinyIcon>} />
+                    <ResultStat label="Final Score" value={finalResult.score.toString()} accent="accent-warm" icon={<TinyIcon>★</TinyIcon>} />
+                    <ResultStat label="Puzzles" value={finalResult.puzzlesSolved.toString()} accent="accent-moss" icon={<TinyIcon>✓</TinyIcon>} />
+                    <ResultStat label="Max Combo" value={`x${finalResult.maxCombo}`} accent="accent-gold" icon={<TinyIcon>⚡</TinyIcon>} />
                     <ResultStat
                       label="Local Best"
                       value={(bestLocalScore ?? finalResult.score).toString()}
                       accent="accent-mist"
-                      icon={<TinyIcon>記</TinyIcon>}
+                      icon={<TinyIcon>♦</TinyIcon>}
                     />
                   </div>
 
@@ -521,19 +524,19 @@ export const App = () => {
                   </div>
                   {playerStats && (
                     <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <CompactStat label="Streak" value={playerStats.currentStreak.toString()} accent="accent-moss" icon={<TinyIcon>日</TinyIcon>} />
-                      <CompactStat label="Longest" value={playerStats.longestStreak.toString()} accent="accent-gold" icon={<TinyIcon>長</TinyIcon>} />
+                      <CompactStat label="Streak" value={playerStats.currentStreak.toString()} accent="accent-moss" icon={<TinyIcon>🔥</TinyIcon>} />
+                      <CompactStat label="Longest" value={playerStats.longestStreak.toString()} accent="accent-gold" icon={<TinyIcon>📈</TinyIcon>} />
                       <CompactStat
                         label="Best Rank"
                         value={playerStats.bestRank ? `#${playerStats.bestRank}` : '--'}
                         accent="accent-warm"
-                        icon={<TinyIcon>位</TinyIcon>}
+                        icon={<TinyIcon>🏅</TinyIcon>}
                       />
                       <CompactStat
                         label="Solved"
                         value={playerStats.totalPuzzlesSolved.toString()}
                         accent="accent-mist"
-                        icon={<TinyIcon>成</TinyIcon>}
+                        icon={<TinyIcon>✓</TinyIcon>}
                       />
                     </div>
                   )}
@@ -736,8 +739,8 @@ const LeaderboardTable = ({
             key={`${entry.rank}-${entry.username}`}
             className={`rounded-[20px] border px-3 py-2.5 text-sm ${
               entry.isCurrentUser
-                ? 'border-[rgba(160,79,55,0.26)] bg-[rgba(160,79,55,0.08)] text-[rgb(41,35,29)]'
-                : 'border-[rgba(191,180,164,0.55)] bg-white/36 text-[rgb(41,35,29)]'
+                ? 'border-[rgba(var(--accent-rgb),0.26)] bg-[rgba(var(--accent-rgb),0.08)] text-[rgb(var(--ink-rgb))]'
+                : 'border-[rgba(var(--line-soft-rgb),0.55)] bg-white/5 text-[rgb(var(--ink-rgb))]'
             }`}
           >
             <div className="flex items-start justify-between gap-3 md:hidden">
@@ -817,26 +820,26 @@ const StatsPanel = ({ playerStats }: { playerStats: PlayerStats | null }) => {
   return (
     <div className="surface-panel w-full max-w-3xl rounded-[26px] p-4 sm:p-6">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <CompactStat label="Current Streak" value={playerStats.currentStreak.toString()} accent="accent-moss" icon={<TinyIcon>日</TinyIcon>} />
-        <CompactStat label="Longest Streak" value={playerStats.longestStreak.toString()} accent="accent-gold" icon={<TinyIcon>長</TinyIcon>} />
-        <CompactStat label="Best Score" value={playerStats.bestScore.toString()} accent="accent-warm" icon={<TinyIcon>点</TinyIcon>} />
+        <CompactStat label="Current Streak" value={playerStats.currentStreak.toString()} accent="accent-moss" icon={<TinyIcon>🔥</TinyIcon>} />
+        <CompactStat label="Longest Streak" value={playerStats.longestStreak.toString()} accent="accent-gold" icon={<TinyIcon>📈</TinyIcon>} />
+        <CompactStat label="Best Score" value={playerStats.bestScore.toString()} accent="accent-warm" icon={<TinyIcon>★</TinyIcon>} />
         <CompactStat
           label="Best Rank"
           value={playerStats.bestRank ? `#${playerStats.bestRank}` : '-'}
           accent="accent-mist"
-          icon={<TinyIcon>位</TinyIcon>}
+          icon={<TinyIcon>🏅</TinyIcon>}
         />
         <CompactStat
           label="Highest Puzzle"
           value={playerStats.highestPuzzleReached.toString()}
           accent="accent-moss"
-          icon={<TinyIcon>段</TinyIcon>}
+          icon={<TinyIcon>🎯</TinyIcon>}
         />
         <CompactStat
           label="Official Runs"
           value={playerStats.totalOfficialRuns.toString()}
           accent="accent-gold"
-          icon={<TinyIcon>走</TinyIcon>}
+          icon={<TinyIcon>🏃</TinyIcon>}
         />
       </div>
       <div className="mt-3 rounded-[22px] border soft-divider bg-white/32 p-4 text-left text-sm ink-muted">
@@ -859,28 +862,28 @@ const SettingsPanel = ({
       <SettingToggle
         label="Sound"
         description="Play game tones."
-        icon={<TinyIcon>音</TinyIcon>}
+        icon={<TinyIcon>🔊</TinyIcon>}
         checked={settings.soundEnabled}
         onToggle={() => setSettings((current) => ({ ...current, soundEnabled: !current.soundEnabled }))}
       />
       <SettingToggle
         label="Haptics"
         description="Use vibration feedback where supported."
-        icon={<TinyIcon>触</TinyIcon>}
+        icon={<TinyIcon>📳</TinyIcon>}
         checked={settings.hapticsEnabled}
         onToggle={() => setSettings((current) => ({ ...current, hapticsEnabled: !current.hapticsEnabled }))}
       />
       <SettingToggle
         label="Reduced Motion"
         description="Reduce flashes and shake."
-        icon={<TinyIcon>静</TinyIcon>}
+        icon={<TinyIcon>🌀</TinyIcon>}
         checked={settings.reducedMotion}
         onToggle={() => setSettings((current) => ({ ...current, reducedMotion: !current.reducedMotion }))}
       />
       <SettingToggle
         label="High Contrast"
         description="Increase gameplay contrast."
-        icon={<TinyIcon>明</TinyIcon>}
+        icon={<TinyIcon>🔆</TinyIcon>}
         checked={settings.highContrast}
         onToggle={() => setSettings((current) => ({ ...current, highContrast: !current.highContrast }))}
       />
@@ -966,7 +969,7 @@ const ReplayPanel = ({ replay, error }: { replay: ReplayData | null; error?: str
         ref={canvasRef}
         width={600}
         height={400}
-        className="aspect-[3/2] w-full rounded-[24px] border soft-divider bg-[#f4efe5]"
+        className="aspect-[3/2] w-full rounded-[24px] border soft-divider bg-[rgb(var(--bg-rgb))]"
       />
       <div className="mt-4 rounded-[22px] border soft-divider bg-white/34 p-4">
         <div className="mb-2 flex items-center justify-between gap-3 text-sm ink-muted">
@@ -1014,7 +1017,7 @@ function drawReplayFrame(
   playbackMs: number
 ) {
   context.clearRect(0, 0, 600, 400);
-  context.fillStyle = '#f4efe5';
+  context.fillStyle = '#f8fafc';
   context.fillRect(0, 0, 600, 400);
 
   const activeSegment = timeline.segments.find((segment) => {
@@ -1069,7 +1072,7 @@ function drawReplayFrame(
             const progress = ageMs / 400;
             const radius = target.r + progress * 20;
             const alpha = 1 - Math.pow(progress, 2);
-            context.strokeStyle = `rgba(194, 147, 48, ${alpha})`;
+            context.strokeStyle = `rgba(16, 185, 129, ${alpha})`;
             context.lineWidth = 2;
             context.beginPath();
             context.arc(target.x, target.y, radius, 0, Math.PI * 2);
@@ -1084,7 +1087,7 @@ function drawReplayFrame(
         const ageMs = (step - activeSegment.resultStep) * REPLAY_STEP_MS;
         if (ageMs < 1000) {
           const alpha = 1 - (ageMs / 1000);
-          context.fillStyle = `rgba(157, 63, 37, ${alpha * 0.45})`;
+          context.fillStyle = `rgba(239, 68, 68, ${alpha * 0.45})`;
           context.beginPath();
           context.arc(headPos.x, headPos.y, 25 + (ageMs / 40), 0, Math.PI * 2);
           context.fill();
@@ -1093,7 +1096,7 @@ function drawReplayFrame(
         const ageMs = (step - activeSegment.resultStep) * REPLAY_STEP_MS;
         if (ageMs < 1000) {
           const alpha = 1 - (ageMs / 1000);
-          context.fillStyle = `rgba(88, 128, 96, ${alpha * 0.35})`;
+          context.fillStyle = `rgba(16, 185, 129, ${alpha * 0.35})`;
           context.beginPath();
           context.arc(headPos.x, headPos.y, 30 + (ageMs / 30), 0, Math.PI * 2);
           context.fill();
@@ -1104,7 +1107,7 @@ function drawReplayFrame(
 }
 
 function drawReplayBounds(context: CanvasRenderingContext2D) {
-  context.strokeStyle = '#8f8477';
+  context.strokeStyle = '#cbd5e1';
   context.lineWidth = 2;
   context.beginPath();
   context.moveTo(0, 2);
@@ -1116,16 +1119,16 @@ function drawReplayBounds(context: CanvasRenderingContext2D) {
 
 function drawReplayHazards(context: CanvasRenderingContext2D, hazards: Array<{ x: number; y: number; r: number }>) {
   for (const hazard of hazards) {
-    context.fillStyle = '#d6cab9';
+    context.fillStyle = '#fee2e2';
     context.beginPath();
     context.arc(hazard.x, hazard.y, hazard.r + 6, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = '#65584c';
+    context.strokeStyle = '#f87171';
     context.lineWidth = 2;
     context.beginPath();
     context.arc(hazard.x, hazard.y, hazard.r + 3, 0, Math.PI * 2);
     context.stroke();
-    context.fillStyle = '#161311';
+    context.fillStyle = '#ef4444';
     context.beginPath();
     context.arc(hazard.x, hazard.y, hazard.r, 0, Math.PI * 2);
     context.fill();
@@ -1134,15 +1137,15 @@ function drawReplayHazards(context: CanvasRenderingContext2D, hazards: Array<{ x
 
 function drawReplayTargets(context: CanvasRenderingContext2D, targets: Array<{ x: number; y: number; r: number }>) {
   for (const target of targets) {
-    context.fillStyle = 'rgba(234, 215, 194, 0.58)';
+    context.fillStyle = 'rgba(199, 210, 254, 0.5)';
     context.beginPath();
     context.arc(target.x, target.y, target.r + 8, 0, Math.PI * 2);
     context.fill();
-    context.fillStyle = '#b84a29';
+    context.fillStyle = '#6366f1';
     context.beginPath();
     context.arc(target.x, target.y, target.r, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = '#fffaf3';
+    context.strokeStyle = '#fff';
     context.lineWidth = 2;
     context.beginPath();
     context.arc(target.x, target.y, target.r - 4, 0, Math.PI * 2);
@@ -1153,7 +1156,7 @@ function drawReplayTargets(context: CanvasRenderingContext2D, targets: Array<{ x
 function drawReplayLine(context: CanvasRenderingContext2D, path: Point[]) {
   if (path.length < 2) return;
 
-  context.strokeStyle = 'rgba(205, 182, 157, 0.42)';
+  context.strokeStyle = 'rgba(100, 116, 139, 0.25)';
   context.lineWidth = 10;
   context.lineJoin = 'round';
   context.lineCap = 'round';
@@ -1164,7 +1167,7 @@ function drawReplayLine(context: CanvasRenderingContext2D, path: Point[]) {
   }
   context.stroke();
 
-  context.strokeStyle = '#29231d';
+  context.strokeStyle = '#0f172a';
   context.lineWidth = 6;
   context.beginPath();
   context.moveTo(path[0]!.x, path[0]!.y);
@@ -1226,7 +1229,7 @@ const SettingToggle = ({
 }) => (
   <button
     onClick={onToggle}
-    className="flex w-full items-center justify-between gap-4 rounded-[22px] border soft-divider bg-white/34 px-4 py-4 text-left transition hover:bg-white/50"
+    className="flex w-full items-center justify-between gap-4 rounded-[22px] border soft-divider bg-white/5 px-4 py-4 text-left transition hover:bg-white/10"
   >
     <div className="min-w-0">
       <div className="flex items-center gap-2">
@@ -1238,8 +1241,8 @@ const SettingToggle = ({
     <div
       className={`relative h-8 w-14 shrink-0 rounded-full border transition ${
         checked
-          ? 'border-[rgba(160,79,55,0.45)] bg-[rgba(160,79,55,0.22)]'
-          : 'border-[rgba(191,180,164,0.8)] bg-white/30'
+          ? 'border-[rgba(var(--accent-rgb),0.45)] bg-[rgba(var(--accent-rgb),0.22)]'
+          : 'border-[rgba(var(--line-soft-rgb),0.8)] bg-white/10'
       }`}
     >
       <div
@@ -1272,7 +1275,7 @@ const PageSection = ({
     <div className="mb-4 flex items-center justify-between gap-3">
       <div>
         <div className="title-divider">
-          <span className="seal-mark text-[10px]">印</span>
+          <span className="seal-mark text-[10px]">N</span>
           <p className="label-kicker">{title}</p>
         </div>
       </div>
