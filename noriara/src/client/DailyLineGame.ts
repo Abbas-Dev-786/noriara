@@ -1,6 +1,7 @@
-import Phaser from 'phaser';
+import type Phaser from 'phaser';
 import { generatePuzzlesForSeed, PuzzleLayout, PuzzleShape } from '../shared/puzzle';
 import { calculatePuzzleScore } from '../shared/scoring';
+import { DEFAULT_GAME_SETTINGS, type GameSettings } from './gameSettings';
 import type {
   FailureEvent,
   FailureReason,
@@ -17,6 +18,8 @@ import {
   smoothPath,
 } from '../shared/geom';
 
+type PhaserModule = typeof Phaser;
+
 export interface GameCallbacks {
   onScoreChange: (score: number, combo: number) => void;
   onTimeChange: (timeMs: number) => void;
@@ -26,20 +29,6 @@ export interface GameCallbacks {
   ) => void;
   onReady: (scene: Phaser.Scene & { startCountdown: () => void; updateSettings: (settings: GameSettings) => void }) => void;
 }
-
-export interface GameSettings {
-  soundEnabled: boolean;
-  hapticsEnabled: boolean;
-  reducedMotion: boolean;
-  highContrast: boolean;
-}
-
-export const DEFAULT_GAME_SETTINGS: GameSettings = {
-  soundEnabled: true,
-  hapticsEnabled: true,
-  reducedMotion: false,
-  highContrast: false,
-};
 
 const GAME_WIDTH = 600;
 const GAME_HEIGHT = 400;
@@ -93,7 +82,8 @@ type PendingAttempt = {
   points: GesturePointSample[];
 };
 
-class DailyLineScene extends Phaser.Scene {
+function createDailyLineScene(Phaser: PhaserModule) {
+  return class DailyLineScene extends Phaser.Scene {
   private callbacks!: GameCallbacks;
   private seed!: string;
   private settings: GameSettings = DEFAULT_GAME_SETTINGS;
@@ -854,9 +844,17 @@ class DailyLineScene extends Phaser.Scene {
       // Best-effort only.
     }
   }
+  };
 }
 
-export function createGame(parent: HTMLElement, seed: string, callbacks: GameCallbacks, settings: GameSettings): Phaser.Game {
+export async function createGame(
+  parent: HTMLElement,
+  seed: string,
+  callbacks: GameCallbacks,
+  settings: GameSettings
+): Promise<Phaser.Game> {
+  const { default: Phaser } = await import('phaser');
+  const DailyLineScene = createDailyLineScene(Phaser);
   const config: Phaser.Types.Core.GameConfig = {
     type: Phaser.AUTO,
     width: GAME_WIDTH,
@@ -873,4 +871,8 @@ export function createGame(parent: HTMLElement, seed: string, callbacks: GameCal
   game.scene.add('DailyLineScene', DailyLineScene, true, { seed, callbacks, settings });
 
   return game;
+}
+
+export async function preloadGameRuntime(): Promise<void> {
+  await import('phaser');
 }

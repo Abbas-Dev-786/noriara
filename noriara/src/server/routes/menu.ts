@@ -25,3 +25,25 @@ menu.post('/post-create', async (c) => {
     );
   }
 });
+
+menu.post('/example-form', async (c) => {
+  return c.json<UiResponse>(
+    {
+      showForm: {
+        name: 'exampleForm',
+        form: {
+          title: 'Example form',
+          fields: [
+            {
+              type: 'string',
+              name: 'message',
+              label: 'Message',
+              helpText: 'Send a short moderator note to the toast handler.',
+            },
+          ],
+        },
+      },
+    },
+    200
+  );
+});

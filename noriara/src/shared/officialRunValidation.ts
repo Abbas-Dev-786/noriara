@@ -2,6 +2,7 @@ import type {
   FailureEvent,
   FailureReason,
   GestureAttempt,
+  RunTelemetry,
   SubmitRunRequest,
 } from './api';
 import { normalizePath, Point, polylineLength, segmentIntersectsCircle, smoothPath } from './geom';
@@ -33,6 +34,10 @@ const FAILURE_RESET_DELAY_MS = 320;
 const SUCCESS_ADVANCE_DELAY_MS = 220;
 const TIMING_TOLERANCE_MS = 120;
 const MAX_SIMULATION_STEPS = 3_500;
+export const MAX_OFFICIAL_RUN_DURATION_MS = 31_000;
+export const MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS = 5_000;
+export const MAX_OFFICIAL_ATTEMPTS = 120;
+export const MAX_OFFICIAL_POINTS = 2_500;
 
 type AttemptEvent =
   | {
@@ -67,8 +72,13 @@ export function validateOfficialRunPayload(payload: SubmitRunRequest): Validatio
     return { accepted: false, reason: 'Missing submission identifiers.' };
   }
 
-  if (summary.totalRunMs < 0 || summary.totalRunMs > 31_000) {
+  if (summary.totalRunMs < 0 || summary.totalRunMs > MAX_OFFICIAL_RUN_DURATION_MS) {
     return { accepted: false, reason: 'Run duration is not plausible.' };
+  }
+
+  const telemetryLimitError = getOfficialRunTelemetryLimitError(telemetry);
+  if (telemetryLimitError) {
+    return { accepted: false, reason: telemetryLimitError };
   }
 
   if (solveEvents.length !== summary.puzzlesSolved) {
@@ -83,7 +93,7 @@ export function validateOfficialRunPayload(payload: SubmitRunRequest): Validatio
     if (solve.solveTimeMs <= 0 || solve.solveTimeMs > 30_000) {
       return { accepted: false, reason: 'Solve time is invalid.' };
     }
-    if (solve.timestampMs < solve.solveTimeMs || solve.timestampMs > 31_000) {
+    if (solve.timestampMs < solve.solveTimeMs || solve.timestampMs > MAX_OFFICIAL_RUN_DURATION_MS) {
       return { accepted: false, reason: 'Solve timestamp is invalid.' };
     }
     if (i > 0 && solve.timestampMs <= solveEvents[i - 1]!.timestampMs) {
@@ -93,7 +103,7 @@ export function validateOfficialRunPayload(payload: SubmitRunRequest): Validatio
 
   for (let i = 0; i < failureEvents.length; i++) {
     const failure = failureEvents[i]!;
-    if (failure.timestampMs < 0 || failure.timestampMs > 31_000) {
+    if (failure.timestampMs < 0 || failure.timestampMs > MAX_OFFICIAL_RUN_DURATION_MS) {
       return { accepted: false, reason: 'Failure timestamp is invalid.' };
     }
     if (i > 0 && failure.timestampMs <= failureEvents[i - 1]!.timestampMs) {
@@ -208,7 +218,7 @@ function isAttemptTelemetryValid(attempt: GestureAttempt): boolean {
   if (attempt.pathLength < MIN_GESTURE_LENGTH) {
     return false;
   }
-  if (attempt.releaseTimestampMs > 31_000 || attempt.startedAtMs < 0) {
+  if (attempt.releaseTimestampMs > MAX_OFFICIAL_RUN_DURATION_MS || attempt.startedAtMs < 0) {
     return false;
   }
   if (attempt.releaseTimestampMs <= attempt.startedAtMs) {
@@ -237,6 +247,27 @@ function isAttemptTelemetryValid(attempt: GestureAttempt): boolean {
 
   const normalized = normalizePath(smoothed, STEP_SIZE);
   return normalized.length >= MIN_GESTURE_POINTS;
+}
+
+export function getOfficialRunTelemetryLimitError(telemetry: RunTelemetry): string | null {
+  if (telemetry.attempts.length > MAX_OFFICIAL_ATTEMPTS) {
+    return 'Submission exceeds the attempt limit.';
+  }
+
+  let pointCount = 0;
+  for (const attempt of telemetry.attempts) {
+    pointCount += attempt.points.length;
+    if (pointCount > MAX_OFFICIAL_POINTS) {
+      return 'Submission exceeds the point budget.';
+    }
+  }
+
+  return null;
+}
+
+export function isOfficialRunSubmissionWindowValid(startedAtEpochMs: number, nowEpochMs: number): boolean {
+  const elapsedMs = nowEpochMs - startedAtEpochMs;
+  return elapsedMs >= 0 && elapsedMs <= MAX_OFFICIAL_RUN_DURATION_MS + MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS;
 }
 
 function consumeAttemptEvent(

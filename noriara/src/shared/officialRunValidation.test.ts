@@ -1,6 +1,14 @@
 import type { GestureAttempt, SubmitRunRequest } from './api';
 import { polylineLength, smoothPath } from './geom';
-import { validateOfficialRunPayload } from './officialRunValidation';
+import {
+  getOfficialRunTelemetryLimitError,
+  isOfficialRunSubmissionWindowValid,
+  MAX_OFFICIAL_ATTEMPTS,
+  MAX_OFFICIAL_POINTS,
+  MAX_OFFICIAL_RUN_DURATION_MS,
+  MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS,
+  validateOfficialRunPayload,
+} from './officialRunValidation';
 import { generatePuzzlesForSeed } from './puzzle';
 import { calculatePuzzleScore } from './scoring';
 import { generateSeed } from './seed';
@@ -16,6 +24,9 @@ function run() {
   testRejectsStaticBodyHazardFailureClaim();
   testRejectsSpoofedScore();
   testRejectsImpossibleGesture();
+  testRejectsTelemetryOverAttemptBudget();
+  testRejectsTelemetryOverPointBudget();
+  testSubmissionWindowGrace();
   console.log('officialRunValidation tests passed');
 }
 
@@ -96,6 +107,54 @@ function testRejectsImpossibleGesture() {
       'expected gesture reproduction rejection'
     );
   }
+}
+
+function testRejectsTelemetryOverAttemptBudget() {
+  const payload = createValidPayload();
+  payload.telemetry.attempts = Array.from({ length: MAX_OFFICIAL_ATTEMPTS + 1 }, (_, index) => ({
+    ...payload.telemetry.attempts[0]!,
+    releaseTimestampMs: 120 + index,
+  }));
+
+  const result = getOfficialRunTelemetryLimitError(payload.telemetry);
+  assert(result === 'Submission exceeds the attempt limit.', 'expected attempt budget rejection');
+}
+
+function testRejectsTelemetryOverPointBudget() {
+  const payload = createValidPayload();
+  const oversizedPoints = Array.from({ length: MAX_OFFICIAL_POINTS + 1 }, (_, index) =>
+    sample(index, 0, index)
+  );
+  payload.telemetry.attempts = [
+    {
+      ...payload.telemetry.attempts[0]!,
+      pointCount: oversizedPoints.length,
+      points: oversizedPoints,
+      pathLength: oversizedPoints.length,
+      releaseTimestampMs: oversizedPoints.length,
+    },
+  ];
+
+  const result = getOfficialRunTelemetryLimitError(payload.telemetry);
+  assert(result === 'Submission exceeds the point budget.', 'expected point budget rejection');
+}
+
+function testSubmissionWindowGrace() {
+  const startedAt = 1_000;
+  assert(
+    isOfficialRunSubmissionWindowValid(
+      startedAt,
+      startedAt + MAX_OFFICIAL_RUN_DURATION_MS + MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS
+    ),
+    'expected submission at grace boundary to be accepted'
+  );
+  assert(
+    !isOfficialRunSubmissionWindowValid(
+      startedAt,
+      startedAt + MAX_OFFICIAL_RUN_DURATION_MS + MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS + 1
+    ),
+    'expected submission beyond grace boundary to be rejected'
+  );
 }
 
 function createValidPayload(): SubmitRunRequest {

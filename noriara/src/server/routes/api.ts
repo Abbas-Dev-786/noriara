@@ -19,7 +19,11 @@ import type {
 } from '../../shared/api';
 import { generatePuzzlesForSeed } from '../../shared/puzzle';
 import { generateSeed } from '../../shared/seed';
-import { validateOfficialRunPayload } from '../../shared/officialRunValidation';
+import {
+  getOfficialRunTelemetryLimitError,
+  isOfficialRunSubmissionWindowValid,
+  validateOfficialRunPayload,
+} from '../../shared/officialRunValidation';
 import { buildPersonalBestSummary, getEmptyPlayerStats, updatePlayerStats } from '../../shared/playerStats';
 import { createReplayData, type ReplayData, type ReplayResponse, validateReplay } from '../../shared/replay';
 
@@ -201,6 +205,51 @@ api.post('/run/submit', async (c) => {
     });
   }
 
+  const serverStartedAtMs = Number.parseInt(existingRun.startedAtMs ?? '', 10);
+  if (!Number.isFinite(serverStartedAtMs) || !isOfficialRunSubmissionWindowValid(serverStartedAtMs, Date.now())) {
+    await redis.hSet(runKey, {
+      status: 'expired',
+      expiredAt: new Date().toISOString(),
+      lastRejectedReason: 'Official run token expired before submission.',
+    });
+
+    return c.json<SubmitRunResponse>({
+      status: 'ok',
+      accepted: false,
+      mode: 'official',
+      finalScore: 0,
+      puzzlesSolved: 0,
+      rank: null,
+      reason: 'Official run token expired before submission.',
+      replayAvailable: false,
+      playerStats: currentStats,
+      personalBest: null,
+      leaderboardPreview: await getLeaderboardEntries(date, username, PREVIEW_LIMIT),
+    });
+  }
+
+  const telemetryLimitError = getOfficialRunTelemetryLimitError(payload.telemetry);
+  if (telemetryLimitError) {
+    await redis.hSet(runKey, {
+      lastRejectedAt: new Date().toISOString(),
+      lastRejectedReason: telemetryLimitError,
+    });
+
+    return c.json<SubmitRunResponse>({
+      status: 'ok',
+      accepted: false,
+      mode: 'official',
+      finalScore: 0,
+      puzzlesSolved: 0,
+      rank: null,
+      reason: telemetryLimitError,
+      replayAvailable: false,
+      playerStats: currentStats,
+      personalBest: null,
+      leaderboardPreview: await getLeaderboardEntries(date, username, PREVIEW_LIMIT),
+    });
+  }
+
   const validation = validateOfficialRunPayload(payload);
   if (!validation.accepted) {
     await redis.hSet(runKey, {
@@ -361,7 +410,7 @@ api.get('/init', async (c) => {
 
   try {
     const [count, username] = await Promise.all([
-      redis.get('count'),
+      redis.get(getCountKey(postId)),
       reddit.getCurrentUsername(),
     ]);
 
@@ -385,7 +434,7 @@ api.post('/increment', async (c) => {
     return c.json<ErrorResponse>({ status: 'error', message: 'postId is required' }, 400);
   }
 
-  const count = await redis.incrBy('count', 1);
+  const count = await redis.incrBy(getCountKey(postId), 1);
   return c.json<IncrementResponse>({
     count,
     postId,
@@ -399,7 +448,7 @@ api.post('/decrement', async (c) => {
     return c.json<ErrorResponse>({ status: 'error', message: 'postId is required' }, 400);
   }
 
-  const count = await redis.incrBy('count', -1);
+  const count = await redis.incrBy(getCountKey(postId), -1);
   return c.json<DecrementResponse>({
     count,
     postId,
@@ -441,6 +490,10 @@ function getPublicReplayKey(date: string, username: string) {
 
 function getPublicReplaySetKey(date: string) {
   return `daily:${date}:replay:public:set`;
+}
+
+function getCountKey(postId: string) {
+  return `post:${postId}:count`;
 }
 
 function makeRankScore(
