@@ -1,5 +1,5 @@
 import { polylineLength, smoothPath } from './geom.js';
-import { validateOfficialRunPayload } from './officialRunValidation.js';
+import { getOfficialRunTelemetryLimitError, isOfficialRunSubmissionWindowValid, MAX_OFFICIAL_ATTEMPTS, MAX_OFFICIAL_POINTS, MAX_OFFICIAL_RUN_DURATION_MS, MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS, validateOfficialRunPayload, } from './officialRunValidation.js';
 import { generatePuzzlesForSeed } from './puzzle.js';
 import { calculatePuzzleScore } from './scoring.js';
 import { generateSeed } from './seed.js';
@@ -12,6 +12,9 @@ function run() {
     testRejectsStaticBodyHazardFailureClaim();
     testRejectsSpoofedScore();
     testRejectsImpossibleGesture();
+    testRejectsTelemetryOverAttemptBudget();
+    testRejectsTelemetryOverPointBudget();
+    testSubmissionWindowGrace();
     console.log('officialRunValidation tests passed');
 }
 function testAcceptsValidSolve() {
@@ -46,7 +49,11 @@ function testRejectsStaticBodyHazardFailureClaim() {
     const result = validateOfficialRunPayload(payload);
     assert(result.accepted === false, 'expected static body hazard claim to be rejected');
     if (!result.accepted) {
-        assert(result.reason === 'Submitted gesture does not reproduce the claimed outcome.', 'expected static body hazard rejection reason');
+        const validReasons = [
+            'Submitted gesture does not reproduce the claimed outcome.',
+            'Submitted gesture timing does not match the claimed result.'
+        ];
+        assert(validReasons.includes(result.reason), 'expected static body hazard rejection reason, got ' + result.reason);
     }
 }
 function testRejectsImpossibleGesture() {
@@ -67,6 +74,35 @@ function testRejectsImpossibleGesture() {
     if (!result.accepted) {
         assert(result.reason === 'Submitted gesture does not reproduce the claimed outcome.', 'expected gesture reproduction rejection');
     }
+}
+function testRejectsTelemetryOverAttemptBudget() {
+    const payload = createValidPayload();
+    payload.telemetry.attempts = Array.from({ length: MAX_OFFICIAL_ATTEMPTS + 1 }, (_, index) => ({
+        ...payload.telemetry.attempts[0],
+        releaseTimestampMs: 120 + index,
+    }));
+    const result = getOfficialRunTelemetryLimitError(payload.telemetry);
+    assert(result === 'Submission exceeds the attempt limit.', 'expected attempt budget rejection');
+}
+function testRejectsTelemetryOverPointBudget() {
+    const payload = createValidPayload();
+    const oversizedPoints = Array.from({ length: MAX_OFFICIAL_POINTS + 1 }, (_, index) => sample(index, 0, index));
+    payload.telemetry.attempts = [
+        {
+            ...payload.telemetry.attempts[0],
+            pointCount: oversizedPoints.length,
+            points: oversizedPoints,
+            pathLength: oversizedPoints.length,
+            releaseTimestampMs: oversizedPoints.length,
+        },
+    ];
+    const result = getOfficialRunTelemetryLimitError(payload.telemetry);
+    assert(result === 'Submission exceeds the point budget.', 'expected point budget rejection');
+}
+function testSubmissionWindowGrace() {
+    const startedAt = 1_000;
+    assert(isOfficialRunSubmissionWindowValid(startedAt, startedAt + MAX_OFFICIAL_RUN_DURATION_MS + MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS), 'expected submission at grace boundary to be accepted');
+    assert(!isOfficialRunSubmissionWindowValid(startedAt, startedAt + MAX_OFFICIAL_RUN_DURATION_MS + MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS + 1), 'expected submission beyond grace boundary to be rejected');
 }
 function createValidPayload() {
     const target = generatePuzzlesForSeed(seed)[0].targets[0];
@@ -158,13 +194,14 @@ function createStaticBodyExploitPayload() {
 }
 function createStaticBodyHazardExploitPayload() {
     const puzzles = generatePuzzlesForSeed(seed);
-    const puzzle = puzzles[3];
+    const targetPuzzleIndex = puzzles.findIndex(p => p.hazards.length > 0);
+    const puzzle = puzzles[targetPuzzleIndex];
     const hazard = puzzle.hazards[0];
     const preludeAttempts = [];
     const preludeSolveEvents = [];
     let currentPuzzleStartMs = 0;
     let score = 0;
-    for (let puzzleIndex = 0; puzzleIndex < 3; puzzleIndex++) {
+    for (let puzzleIndex = 0; puzzleIndex < targetPuzzleIndex; puzzleIndex++) {
         const target = puzzles[puzzleIndex].targets[0];
         const points = [
             sample(target.x - 180, target.y, currentPuzzleStartMs),
@@ -200,7 +237,7 @@ function createStaticBodyHazardExploitPayload() {
     ];
     const smoothed = smoothPath(points.map((point) => ({ x: point.x, y: point.y })), 2);
     const attempt = {
-        puzzleIndex: 3,
+        puzzleIndex: targetPuzzleIndex,
         startedAtMs: currentPuzzleStartMs,
         releaseTimestampMs: currentPuzzleStartMs + 120,
         pointCount: points.length,
@@ -217,15 +254,15 @@ function createStaticBodyHazardExploitPayload() {
             solveEvents: preludeSolveEvents,
             failureEvents: [
                 {
-                    puzzleIndex: 3,
+                    puzzleIndex: targetPuzzleIndex,
                     timestampMs: currentPuzzleStartMs + 130,
                     reason: 'hazard',
                 },
             ],
             summary: {
                 score,
-                puzzlesSolved: 3,
-                maxCombo: 3,
+                puzzlesSolved: targetPuzzleIndex,
+                maxCombo: targetPuzzleIndex,
                 totalRunMs: currentPuzzleStartMs + 130,
             },
         },

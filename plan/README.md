@@ -20,3 +20,22 @@ Each phase ends with a working milestone that can be opened, played, and validat
 
 The project should not move to a later phase until the current milestone is playable and its acceptance checklist is complete.
 
+## Current Status
+
+Current implementation status is `Phase 3 closeout`.
+
+What this means:
+
+- Phase 0 foundation is complete.
+- Phase 1 local gameplay loop is complete.
+- Phase 2 official competition loop is complete.
+- Phase 3 features are mostly implemented, but the acceptance gate is still open.
+
+The next gate is not Phase 4 feature work yet. The next gate is to close Phase 3 with:
+
+- Devvit playtest verification of official runs, leaderboard, stats, replay access, and expanded-mode flow.
+- Replay fidelity verification against submitted telemetry.
+- Mobile and accessibility QA for reduced motion, high contrast, sound, and haptics.
+- UI cleanup for any copy, encoding, or presentation defects found during QA.
+
+Only after those checks pass should the project move into Phase 4 content expansion.

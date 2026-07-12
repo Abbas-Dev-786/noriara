@@ -64,6 +64,16 @@ Reason:
 
 Replay data can grow quickly.
 
+### Current Delivery Gate Is Phase 3 Closeout
+
+Default:
+
+Treat the project as being in late Phase 3 rather than starting Phase 4 immediately.
+
+Reason:
+
+The codebase already includes official runs, leaderboard flows, replay storage/viewing, player stats, and accessibility settings. The highest-value next work is validating and polishing those systems in Devvit playtest before expanding generator scope.
+
 ### Phase 1 Uses Only Targets and Black Holes
 
 Default:
