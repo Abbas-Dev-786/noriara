@@ -323,7 +323,7 @@ function createDailyLineScene(Phaser: PhaserModule) {
 
     const palette = this.getPalette();
 
-    // Outer glow pass — subtle shadow
+    // Outer glow pass.
     this.graphics.lineStyle(LINE_WIDTH + (this.settings.highContrast ? 5 : 4), palette.lineGlow, this.settings.highContrast ? 0.34 : 0.12);
     this.graphics.beginPath();
     this.graphics.moveTo(pathToRender[0]!.x, pathToRender[0]!.y);
@@ -557,7 +557,7 @@ function createDailyLineScene(Phaser: PhaserModule) {
         fontSize: '36px',
         color: '#10b981',
         fontStyle: 'bold',
-        fontFamily: 'Inter',
+        fontFamily: 'Zen Kaku Gothic New',
       }).setOrigin(0.5);
 
       this.tweens.add({
@@ -781,7 +781,7 @@ function createDailyLineScene(Phaser: PhaserModule) {
         targetFill: 0xff2050,
         targetRing: 0xffffff,
         lineGlow: 0xffffff,
-        lineCore: 0x000000,
+        lineCore: 0xffff00,
         pop: 0xffd050,
         failureFill: 0x000000,
         failureRing: 0xff0000,

@@ -9,11 +9,12 @@ const MIN_GESTURE_LENGTH = 40;
 const MAX_REPLAY_POINTS = 2_500;
 const MAX_REPLAY_ATTEMPTS = 120;
 const MAX_SIMULATION_STEPS = 3_500;
-export function createReplayData(username, date, seed, score, puzzlesSolved, rank, acceptedAt, telemetry) {
+export function createReplayData(username, date, seed, runVariant, score, puzzlesSolved, rank, acceptedAt, telemetry) {
     return {
         version: 1,
         date,
         seed,
+        runVariant,
         username,
         score,
         puzzlesSolved,
@@ -26,6 +27,8 @@ export function validateReplay(replay) {
     if (replay.version !== 1)
         return false;
     if (!replay.seed || !replay.username || !replay.date)
+        return false;
+    if (replay.runVariant !== 'daily')
         return false;
     if (replay.telemetry.attempts.length > MAX_REPLAY_ATTEMPTS)
         return false;

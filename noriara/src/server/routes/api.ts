@@ -33,11 +33,12 @@ type ErrorResponse = {
 };
 
 const OFFICIAL_RUN_TTL_SECONDS = 60 * 60 * 24 * 2;
-const RUN_META_TTL_SECONDS = 60 * 60 * 24 * 14;
-const REPLAY_TTL_SECONDS = 60 * 60 * 24 * 14;
+const RUN_META_TTL_SECONDS = 60 * 60 * 24 * 30;
+const REPLAY_TTL_SECONDS = 60 * 60 * 24 * 30;
 const PUBLIC_REPLAY_LIMIT = 10;
 const PREVIEW_LIMIT = 5;
 const LEADERBOARD_LIMIT = 25;
+const DAILY_RUN_VARIANT = 'daily' as const;
 
 export const api = new Hono();
 
@@ -63,6 +64,7 @@ api.get('/bootstrap', async (c) => {
     status: 'ok',
     date,
     seed,
+    runVariant: DAILY_RUN_VARIANT,
     puzzles: generatePuzzlesForSeed(seed),
     username: username ?? null,
     loggedIn,
@@ -82,6 +84,7 @@ api.post('/run/start', async (c) => {
     return c.json<StartRunResponse>({
       status: 'ok',
       mode: 'practice',
+      runVariant: DAILY_RUN_VARIANT,
       date,
       seed,
       runId: null,
@@ -95,6 +98,7 @@ api.post('/run/start', async (c) => {
     return c.json<StartRunResponse>({
       status: 'ok',
       mode: 'practice',
+      runVariant: DAILY_RUN_VARIANT,
       date,
       seed,
       runId: null,
@@ -123,6 +127,7 @@ api.post('/run/start', async (c) => {
   return c.json<StartRunResponse>({
     status: 'ok',
     mode: 'official',
+    runVariant: DAILY_RUN_VARIANT,
     date,
     seed,
     runId,
@@ -133,6 +138,7 @@ api.post('/run/start', async (c) => {
 
 api.post('/run/submit', async (c) => {
   const username = await reddit.getCurrentUsername();
+  const payload = await c.req.json<SubmitRunRequest>();
   const { date, seed } = getCurrentDailySeed();
 
   if (!username) {
@@ -151,7 +157,6 @@ api.post('/run/submit', async (c) => {
     });
   }
 
-  const payload = await c.req.json<SubmitRunRequest>();
   const runKey = getOfficialRunKey(date, username);
   const existingRun = await redis.hGetAll(runKey);
   const currentStats = await getPlayerStats(username);
@@ -198,6 +203,27 @@ api.post('/run/submit', async (c) => {
       puzzlesSolved: 0,
       rank: null,
       reason: 'Daily seed mismatch.',
+      replayAvailable: false,
+      playerStats: currentStats,
+      personalBest: null,
+      leaderboardPreview: await getLeaderboardEntries(date, username, PREVIEW_LIMIT),
+    });
+  }
+
+  if (payload.runVariant !== DAILY_RUN_VARIANT) {
+    await redis.hSet(runKey, {
+      lastRejectedAt: new Date().toISOString(),
+      lastRejectedReason: 'Unsupported run variant.',
+    });
+
+    return c.json<SubmitRunResponse>({
+      status: 'ok',
+      accepted: false,
+      mode: 'official',
+      finalScore: 0,
+      puzzlesSolved: 0,
+      rank: null,
+      reason: 'Unsupported run variant.',
       replayAvailable: false,
       playerStats: currentStats,
       personalBest: null,
@@ -272,6 +298,26 @@ api.post('/run/submit', async (c) => {
     });
   }
 
+  const claimed = await redis.hSetNX(runKey, 'acceptanceClaimedAt', new Date().toISOString());
+  if (claimed !== 1) {
+    return c.json<SubmitRunResponse>({
+      status: 'ok',
+      accepted: false,
+      mode: 'official',
+      finalScore: 0,
+      puzzlesSolved: 0,
+      rank: null,
+      reason: 'Official run already submitted for today.',
+      replayAvailable: false,
+      playerStats: currentStats,
+      personalBest: null,
+      leaderboardPreview: await getLeaderboardEntries(date, username, PREVIEW_LIMIT),
+    });
+  }
+  await redis.hSet(runKey, {
+    status: 'submitting',
+  });
+
   const runMetaKey = getRunMetaKey(date, username);
   const acceptedAt = new Date().toISOString();
   const personalBest = buildPersonalBestSummary(
@@ -324,6 +370,7 @@ api.post('/run/submit', async (c) => {
     username,
     date,
     seed,
+    DAILY_RUN_VARIANT,
     validation.finalScore,
     validation.puzzlesSolved,
     rank,
@@ -357,7 +404,8 @@ api.post('/run/submit', async (c) => {
 });
 
 api.get('/leaderboard', async (c) => {
-  const { date } = getCurrentDailySeed();
+  const { date: currentDate } = getCurrentDailySeed();
+  const date = c.req.query('date') ?? currentDate;
   const username = await reddit.getCurrentUsername();
   const [entries, currentUserRank] = await Promise.all([
     getLeaderboardEntries(date, username ?? null, LEADERBOARD_LIMIT),
@@ -384,7 +432,8 @@ api.get('/stats', async (c) => {
 
 api.get('/replay/:username', async (c) => {
   const requestedUsername = c.req.param('username');
-  const date = c.req.query('date') ?? getCurrentDailySeed().date;
+  const { date: currentDate } = getCurrentDailySeed();
+  const date = c.req.query('date') ?? currentDate;
   const viewerUsername = await reddit.getCurrentUsername();
   const replay = await getReplay(date, requestedUsername, viewerUsername ?? null);
 

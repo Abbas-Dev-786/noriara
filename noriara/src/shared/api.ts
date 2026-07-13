@@ -25,6 +25,7 @@ export type HealthResponse = {
 };
 
 export type RunMode = 'official' | 'practice';
+export type RunVariant = 'daily';
 export type FailureReason = 'hazard' | 'escape';
 
 export type GesturePointSample = {
@@ -110,6 +111,7 @@ export type BootstrapResponse = {
   status: 'ok';
   date: string;
   seed: string;
+  runVariant: RunVariant;
   puzzles: PuzzleLayout[];
   username: string | null;
   loggedIn: boolean;
@@ -123,6 +125,7 @@ export type BootstrapResponse = {
 export type StartRunResponse = {
   status: 'ok';
   mode: RunMode;
+  runVariant: RunVariant;
   date: string;
   seed: string;
   runId: string | null;
@@ -134,6 +137,7 @@ export type SubmitRunRequest = {
   runId: string;
   date: string;
   seed: string;
+  runVariant: RunVariant;
   telemetry: RunTelemetry;
 };
 

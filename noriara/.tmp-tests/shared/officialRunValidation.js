@@ -22,6 +22,9 @@ export function validateOfficialRunPayload(payload) {
     if (!payload.runId || !payload.date || !payload.seed) {
         return { accepted: false, reason: 'Missing submission identifiers.' };
     }
+    if (payload.runVariant !== 'daily') {
+        return { accepted: false, reason: 'Unsupported run variant.' };
+    }
     if (summary.totalRunMs < 0 || summary.totalRunMs > MAX_OFFICIAL_RUN_DURATION_MS) {
         return { accepted: false, reason: 'Run duration is not plausible.' };
     }

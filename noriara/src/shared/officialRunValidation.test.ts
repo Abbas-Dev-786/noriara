@@ -26,6 +26,7 @@ function run() {
   testRejectsImpossibleGesture();
   testRejectsTelemetryOverAttemptBudget();
   testRejectsTelemetryOverPointBudget();
+  testRejectsNonDailyRunVariant();
   testSubmissionWindowGrace();
   console.log('officialRunValidation tests passed');
 }
@@ -143,6 +144,18 @@ function testRejectsTelemetryOverPointBudget() {
   assert(result === 'Submission exceeds the point budget.', 'expected point budget rejection');
 }
 
+function testRejectsNonDailyRunVariant() {
+  const payload = createValidPayload();
+  (payload as unknown as { runVariant: string }).runVariant = 'event';
+
+  const result = validateOfficialRunPayload(payload);
+
+  assert(result.accepted === false, 'expected non-daily variant to be rejected');
+  if (!result.accepted) {
+    assert(result.reason === 'Unsupported run variant.', 'expected unsupported variant rejection');
+  }
+}
+
 function testSubmissionWindowGrace() {
   const startedAt = 1_000;
   assert(
@@ -190,6 +203,7 @@ function createValidPayload(): SubmitRunRequest {
     runId: 'run-1',
     date,
     seed,
+    runVariant: 'daily',
     telemetry: {
       attempts: [attempt],
       solveEvents: [
@@ -239,6 +253,7 @@ function createStaticBodyExploitPayload(): SubmitRunRequest {
     runId: 'run-exploit',
     date,
     seed,
+    runVariant: 'daily',
     telemetry: {
       attempts: [attempt],
       solveEvents: [
@@ -325,6 +340,7 @@ function createStaticBodyHazardExploitPayload(): SubmitRunRequest {
     runId: 'run-hazard-exploit',
     date,
     seed,
+    runVariant: 'daily',
     telemetry: {
       attempts: [...preludeAttempts, attempt],
       solveEvents: preludeSolveEvents,

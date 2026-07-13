@@ -4,7 +4,7 @@ import { context, requestExpandedMode } from '@devvit/web/client';
 import { StrictMode, useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 
-/* ── Animated background canvas ─────────────────────────────────────── */
+/* Animated background canvas */
 
 interface FloatingTarget {
   x: number;
@@ -111,12 +111,12 @@ function useBackgroundCanvas() {
 
         ctx.beginPath();
         ctx.arc(t.x, t.y, r + 6, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(199, 210, 254, 0.25)';
+        ctx.fillStyle = 'rgba(208, 157, 134, 0.25)';
         ctx.fill();
 
         ctx.beginPath();
         ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(99, 102, 241, 0.15)';
+        ctx.fillStyle = 'rgba(160, 79, 55, 0.15)';
         ctx.fill();
       }
 
@@ -139,7 +139,7 @@ function useBackgroundCanvas() {
           ctx.beginPath();
           ctx.moveTo(prev.x, prev.y);
           ctx.lineTo(seg.x, seg.y);
-          ctx.strokeStyle = `rgba(30, 41, 59, ${progress * 0.12})`;
+          ctx.strokeStyle = `rgba(41, 35, 29, ${progress * 0.12})`;
           ctx.lineWidth = 3 + progress * 2;
           ctx.stroke();
         }
@@ -149,7 +149,7 @@ function useBackgroundCanvas() {
         const head = s.snake[headIdx]!;
         ctx.beginPath();
         ctx.arc(head.x, head.y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(30, 41, 59, 0.18)';
+        ctx.fillStyle = 'rgba(41, 35, 29, 0.18)';
         ctx.fill();
       }
     };
@@ -165,7 +165,7 @@ function useBackgroundCanvas() {
   return canvasRef;
 }
 
-/* ── Splash component ───────────────────────────────────────────────── */
+/* Splash component */
 
 export const Splash = () => {
   const [showHowToPlay, setShowHowToPlay] = useState(false);
@@ -182,7 +182,7 @@ export const Splash = () => {
 
       <div className="motion-rise relative z-10 mx-auto w-full max-w-xl">
         <section className="surface-panel-strong rounded-[30px] px-6 py-8 text-center sm:px-8 sm:py-10">
-          <div className="mx-auto flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border soft-divider bg-white/40 p-3 shadow-[0_4px_16px_rgba(99,102,241,0.1)] sm:h-20 sm:w-20">
+          <div className="mx-auto flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border soft-divider bg-white/40 p-3 shadow-[0_4px_16px_rgba(160,79,55,0.1)] sm:h-20 sm:w-20">
             <img className="object-contain" src="/snoo.png" alt="Snoo" />
           </div>
 

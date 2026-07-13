@@ -1,4 +1,4 @@
-import type { FailureReason, GestureAttempt, RunTelemetry } from './api';
+import type { FailureReason, GestureAttempt, RunTelemetry, RunVariant } from './api';
 import { normalizePath, Point, polylineLength, segmentIntersectsCircle, smoothPath } from './geom';
 import { generatePuzzlesForSeed, PuzzleLayout, PuzzleShape } from './puzzle';
 
@@ -6,6 +6,7 @@ export interface ReplayData {
   version: 1;
   date: string;
   seed: string;
+  runVariant: RunVariant;
   username: string;
   score: number;
   puzzlesSolved: number;
@@ -53,6 +54,7 @@ export function createReplayData(
   username: string,
   date: string,
   seed: string,
+  runVariant: RunVariant,
   score: number,
   puzzlesSolved: number,
   rank: number | null,
@@ -63,6 +65,7 @@ export function createReplayData(
     version: 1,
     date,
     seed,
+    runVariant,
     username,
     score,
     puzzlesSolved,
@@ -75,6 +78,7 @@ export function createReplayData(
 export function validateReplay(replay: ReplayData): boolean {
   if (replay.version !== 1) return false;
   if (!replay.seed || !replay.username || !replay.date) return false;
+  if (replay.runVariant !== 'daily') return false;
   if (replay.telemetry.attempts.length > MAX_REPLAY_ATTEMPTS) return false;
 
   let pointCount = 0;

@@ -173,10 +173,10 @@ export const App = () => {
   }, []);
 
   useEffect(() => {
-    const bootstrapTimer = window.setTimeout(() => {
+    const timer = window.setTimeout(() => {
       void fetchBootstrap();
     }, 0);
-    return () => window.clearTimeout(bootstrapTimer);
+    return () => window.clearTimeout(timer);
   }, [fetchBootstrap]);
 
   useEffect(() => {
@@ -252,6 +252,7 @@ export const App = () => {
             runId,
             date: runDate,
             seed: runSeed,
+            runVariant: 'daily',
             telemetry,
           }),
         });
@@ -438,9 +439,9 @@ export const App = () => {
         <main className="relative mx-auto flex w-full max-w-4xl flex-1 flex-col">
           {gameState === 'playing' && isHomeView && (
             <div className="motion-soft mb-4 grid grid-cols-3 gap-3">
-              <HudStat label="⏱ Time" value={formatTime(timeMs)} accent="accent-warm" />
-              <HudStat label="⭐ Score" value={score.toString()} accent="accent-moss" />
-              <HudStat label="⚡ Combo" value={`x${combo}`} accent={combo > 1 ? 'accent-gold' : 'ink-muted'} />
+              <HudStat label="Time" value={formatTime(timeMs)} accent="accent-warm" />
+              <HudStat label="Score" value={score.toString()} accent="accent-moss" />
+              <HudStat label="Combo" value={`x${combo}`} accent={combo > 1 ? 'accent-gold' : 'ink-muted'} />
             </div>
           )}
 
@@ -478,8 +479,10 @@ export const App = () => {
             <OverlayCard>
               <div className="motion-rise mx-auto flex w-full max-w-2xl flex-col items-center justify-center text-center">
                 <div className="surface-panel rounded-[28px] px-6 py-8 sm:px-8 sm:py-10">
-                  <p className="label-kicker">Today&apos;s run</p>
-                  <h2 className="display-title brush-stroke mt-4 text-4xl sm:text-5xl">One Stroke</h2>
+                  <p className="label-kicker">Today's run</p>
+                  <h2 className="display-title brush-stroke mt-4 text-4xl sm:text-5xl">
+                    One Stroke
+                  </h2>
                   <p className="body-copy mx-auto mt-4 max-w-md text-sm sm:text-base">
                     One stroke. Thirty seconds. The same board for everyone.
                   </p>
@@ -548,14 +551,14 @@ export const App = () => {
                   <h2 className="display-title brush-stroke mt-4 text-4xl sm:text-[3rem]">Time's Up!</h2>
 
                   <div className="mt-6 grid grid-cols-2 gap-4">
-                    <ResultStat label="Final Score" value={finalResult.score.toString()} accent="accent-warm" icon={<TinyIcon>★</TinyIcon>} />
-                    <ResultStat label="Puzzles" value={finalResult.puzzlesSolved.toString()} accent="accent-moss" icon={<TinyIcon>✓</TinyIcon>} />
-                    <ResultStat label="Max Combo" value={`x${finalResult.maxCombo}`} accent="accent-gold" icon={<TinyIcon>⚡</TinyIcon>} />
+                    <ResultStat label="Final Score" value={finalResult.score.toString()} accent="accent-warm" icon={<TinyIcon>S</TinyIcon>} />
+                    <ResultStat label="Puzzles" value={finalResult.puzzlesSolved.toString()} accent="accent-moss" icon={<TinyIcon>P</TinyIcon>} />
+                    <ResultStat label="Max Combo" value={`x${finalResult.maxCombo}`} accent="accent-gold" icon={<TinyIcon>C</TinyIcon>} />
                     <ResultStat
                       label="Local Best"
                       value={(bestLocalScore ?? finalResult.score).toString()}
                       accent="accent-mist"
-                      icon={<TinyIcon>♦</TinyIcon>}
+                      icon={<TinyIcon>B</TinyIcon>}
                     />
                   </div>
 
@@ -565,19 +568,19 @@ export const App = () => {
                   </div>
                   {playerStats && (
                     <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
-                      <CompactStat label="Streak" value={playerStats.currentStreak.toString()} accent="accent-moss" icon={<TinyIcon>🔥</TinyIcon>} />
-                      <CompactStat label="Longest" value={playerStats.longestStreak.toString()} accent="accent-gold" icon={<TinyIcon>📈</TinyIcon>} />
+                      <CompactStat label="Streak" value={playerStats.currentStreak.toString()} accent="accent-moss" icon={<TinyIcon>S</TinyIcon>} />
+                      <CompactStat label="Longest" value={playerStats.longestStreak.toString()} accent="accent-gold" icon={<TinyIcon>L</TinyIcon>} />
                       <CompactStat
                         label="Best Rank"
                         value={playerStats.bestRank ? `#${playerStats.bestRank}` : '--'}
                         accent="accent-warm"
-                        icon={<TinyIcon>🏅</TinyIcon>}
+                        icon={<TinyIcon>R</TinyIcon>}
                       />
                       <CompactStat
                         label="Solved"
                         value={playerStats.totalPuzzlesSolved.toString()}
                         accent="accent-mist"
-                        icon={<TinyIcon>✓</TinyIcon>}
+                        icon={<TinyIcon>P</TinyIcon>}
                       />
                     </div>
                   )}
@@ -610,7 +613,7 @@ export const App = () => {
 
           {pageView === 'leaderboard' && (
             <PageSection
-              title="Daily leaderboard"
+              title="Daily Leaderboard"
               onBack={() => setPageView('home')}
             >
               <LeaderboardTable entries={leaderboardEntries} onOpenReplay={openReplay} />
@@ -869,26 +872,26 @@ const StatsPanel = ({ playerStats }: { playerStats: PlayerStats | null }) => {
   return (
     <div className="surface-panel w-full max-w-3xl rounded-[26px] p-4 sm:p-6">
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-        <CompactStat label="Current Streak" value={playerStats.currentStreak.toString()} accent="accent-moss" icon={<TinyIcon>🔥</TinyIcon>} />
-        <CompactStat label="Longest Streak" value={playerStats.longestStreak.toString()} accent="accent-gold" icon={<TinyIcon>📈</TinyIcon>} />
-        <CompactStat label="Best Score" value={playerStats.bestScore.toString()} accent="accent-warm" icon={<TinyIcon>★</TinyIcon>} />
+        <CompactStat label="Current Streak" value={playerStats.currentStreak.toString()} accent="accent-moss" icon={<TinyIcon>S</TinyIcon>} />
+        <CompactStat label="Longest Streak" value={playerStats.longestStreak.toString()} accent="accent-gold" icon={<TinyIcon>L</TinyIcon>} />
+        <CompactStat label="Best Score" value={playerStats.bestScore.toString()} accent="accent-warm" icon={<TinyIcon>B</TinyIcon>} />
         <CompactStat
           label="Best Rank"
           value={playerStats.bestRank ? `#${playerStats.bestRank}` : '-'}
           accent="accent-mist"
-          icon={<TinyIcon>🏅</TinyIcon>}
+          icon={<TinyIcon>R</TinyIcon>}
         />
         <CompactStat
           label="Highest Puzzle"
           value={playerStats.highestPuzzleReached.toString()}
           accent="accent-moss"
-          icon={<TinyIcon>🎯</TinyIcon>}
+          icon={<TinyIcon>P</TinyIcon>}
         />
         <CompactStat
           label="Official Runs"
           value={playerStats.totalOfficialRuns.toString()}
           accent="accent-gold"
-          icon={<TinyIcon>🏃</TinyIcon>}
+          icon={<TinyIcon>O</TinyIcon>}
         />
       </div>
       <div className="mt-3 rounded-[22px] border soft-divider bg-white/32 p-4 text-left text-sm ink-muted">
@@ -911,28 +914,28 @@ const SettingsPanel = ({
       <SettingToggle
         label="Sound"
         description="Play game tones."
-        icon={<TinyIcon>🔊</TinyIcon>}
+        icon={<TinyIcon>A</TinyIcon>}
         checked={settings.soundEnabled}
         onToggle={() => setSettings((current) => ({ ...current, soundEnabled: !current.soundEnabled }))}
       />
       <SettingToggle
         label="Haptics"
         description="Use vibration feedback where supported."
-        icon={<TinyIcon>📳</TinyIcon>}
+        icon={<TinyIcon>H</TinyIcon>}
         checked={settings.hapticsEnabled}
         onToggle={() => setSettings((current) => ({ ...current, hapticsEnabled: !current.hapticsEnabled }))}
       />
       <SettingToggle
         label="Reduced Motion"
         description="Reduce flashes and shake."
-        icon={<TinyIcon>🌀</TinyIcon>}
+        icon={<TinyIcon>M</TinyIcon>}
         checked={settings.reducedMotion}
         onToggle={() => setSettings((current) => ({ ...current, reducedMotion: !current.reducedMotion }))}
       />
       <SettingToggle
         label="High Contrast"
         description="Increase gameplay contrast."
-        icon={<TinyIcon>🔆</TinyIcon>}
+        icon={<TinyIcon>C</TinyIcon>}
         checked={settings.highContrast}
         onToggle={() => setSettings((current) => ({ ...current, highContrast: !current.highContrast }))}
       />
