@@ -121,21 +121,17 @@ function useBackgroundCanvas() {
 }
 
 /* DOM-based targets with backdrop blur */
+const TARGETS_CONFIG = [
+  { id: 0, x: 12, y: 15, size: 45, color: 'rgba(43, 89, 195, 0.5)', delay: 0, animDuration: 12 },
+  { id: 1, x: 82, y: 20, size: 55, color: 'rgba(46, 139, 87, 0.5)', delay: 1, animDuration: 15 },
+  { id: 2, x: 8, y: 55, size: 35, color: 'rgba(200, 62, 77, 0.5)', delay: 2, animDuration: 10 },
+  { id: 3, x: 85, y: 72, size: 50, color: 'rgba(43, 89, 195, 0.5)', delay: 0.5, animDuration: 14 },
+  { id: 4, x: 22, y: 80, size: 40, color: 'rgba(46, 139, 87, 0.5)', delay: 1.5, animDuration: 11 },
+  { id: 5, x: 50, y: 8, size: 48, color: 'rgba(200, 62, 77, 0.5)', delay: 3, animDuration: 16 }
+];
+
 const TargetLayer = () => {
-  const targets = useRef(
-    Array.from({ length: 6 }).map((_, i) => {
-      const colors = ['rgba(43, 89, 195, 0.5)', 'rgba(46, 139, 87, 0.5)', 'rgba(200, 62, 77, 0.5)'];
-      return {
-        id: i,
-        x: 10 + Math.random() * 80,
-        y: 10 + Math.random() * 80,
-        size: 30 + Math.random() * 30, // 30-60px
-        color: colors[i % colors.length],
-        delay: Math.random() * 4,
-        animDuration: 10 + Math.random() * 10, // 10-20s float
-      };
-    })
-  ).current;
+  const targets = useRef(TARGETS_CONFIG).current;
 
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
