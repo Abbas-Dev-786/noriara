@@ -13,24 +13,79 @@ interface SnakeSegment {
   y: number;
 }
 
+function catmullRom(p0: number, p1: number, p2: number, p3: number, t: number): number {
+  return 0.5 * (
+    (2 * p1) +
+    (-p0 + p2) * t +
+    (2 * p0 - 5 * p1 + 4 * p2 - p3) * t * t +
+    (-p0 + 3 * p1 - 3 * p2 + p3) * t * t * t
+  );
+}
+
 function createSnake(w: number, h: number): SnakeSegment[] {
+  // Order of points matching TARGETS_CONFIG to form a nice loop
+  const pctPoints = [
+    { x: 12, y: 15 }, // Target 0
+    { x: 50, y: 8 },  // Target 5
+    { x: 82, y: 20 }, // Target 1
+    { x: 85, y: 72 }, // Target 3
+    { x: 22, y: 80 }, // Target 4
+    { x: 8, y: 55 }   // Target 2
+  ];
+
+  // Convert percentages to pixel positions
+  const pixelPoints = pctPoints.map(p => ({
+    x: (p.x / 100) * w,
+    y: (p.y / 100) * h
+  }));
+
   const segments: SnakeSegment[] = [];
-  const cx = w / 2;
-  const cy = h / 2;
-  for (let i = 0; i < 120; i++) {
-    const t = i * 0.05;
-    segments.push({
-      x: cx + Math.cos(t * 0.7) * (w * 0.28) + Math.sin(t * 1.3) * 40,
-      y: cy + Math.sin(t * 0.9) * (h * 0.22) + Math.cos(t * 1.1) * 30,
-    });
+  const numPts = pixelPoints.length;
+  const stepsPerSegment = 50; // Total points = 6 * 50 = 300 for smooth transitions
+
+  for (let i = 0; i < numPts; i++) {
+    const p0 = pixelPoints[(i - 1 + numPts) % numPts]!;
+    const p1 = pixelPoints[i]!;
+    const p2 = pixelPoints[(i + 1) % numPts]!;
+    const p3 = pixelPoints[(i + 2) % numPts]!;
+
+    for (let step = 0; step < stepsPerSegment; step++) {
+      const t = step / stepsPerSegment;
+      segments.push({
+        x: catmullRom(p0.x, p1.x, p2.x, p3.x, t),
+        y: catmullRom(p0.y, p1.y, p2.y, p3.y, t)
+      });
+    }
   }
+
   return segments;
+}
+
+interface SplashParticle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  age: number;
+  maxAge: number;
+  color: string;
+}
+
+interface SplashRipple {
+  x: number;
+  y: number;
+  age: number;
+  maxAge: number;
+  color: string;
 }
 
 function useBackgroundCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<{
     snake: SnakeSegment[];
+    particles: SplashParticle[];
+    ripples: SplashRipple[];
+    lastPoppedTargetId: number | null;
     frame: number;
     offset: number;
   } | null>(null);
@@ -53,6 +108,9 @@ function useBackgroundCanvas() {
       ctx.scale(dpr, dpr);
       stateRef.current = {
         snake: createSnake(rect.width, rect.height),
+        particles: [],
+        ripples: [],
+        lastPoppedTargetId: null,
         frame: 0,
         offset: 0,
       };
@@ -72,8 +130,6 @@ function useBackgroundCanvas() {
 
       s.offset += 0.4;
       s.frame++;
-
-
 
       // Draw animated snake trail
       const snakeLen = s.snake.length;
@@ -105,6 +161,114 @@ function useBackgroundCanvas() {
         ctx.beginPath();
         ctx.arc(head.x, head.y, 5, 0, Math.PI * 2);
         ctx.fillStyle = 'rgba(28, 32, 38, 0.18)';
+        ctx.fill();
+
+        // Target touch detection (same game logic)
+        const pixelTargets = TARGETS_CONFIG.map(t => ({
+          id: t.id,
+          x: (t.x / 100) * w,
+          y: (t.y / 100) * h,
+          color: t.color
+        }));
+
+        let closestTarget = null;
+        let minDistance = 9999;
+        for (const pt of pixelTargets) {
+          const dx = head.x - pt.x;
+          const dy = head.y - pt.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 15 && dist < minDistance) {
+            minDistance = dist;
+            closestTarget = pt;
+          }
+        }
+
+        if (closestTarget) {
+          if (s.lastPoppedTargetId !== closestTarget.id) {
+            s.lastPoppedTargetId = closestTarget.id;
+
+            // Spawn bursting particles
+            for (let i = 0; i < 6; i++) {
+              const angle = (Math.PI * 2 * i) / 6 + Math.random() * 0.2;
+              const speed = 10 + Math.random() * 15;
+              s.particles.push({
+                x: closestTarget.x,
+                y: closestTarget.y,
+                vx: Math.cos(angle) * speed,
+                vy: Math.sin(angle) * speed,
+                age: 0,
+                maxAge: 30 + Math.random() * 20,
+                color: closestTarget.color,
+              });
+            }
+
+            // Spawn expanding ripple
+            s.ripples.push({
+              x: closestTarget.x,
+              y: closestTarget.y,
+              age: 0,
+              maxAge: 25,
+              color: closestTarget.color,
+            });
+          }
+        } else {
+          // Reset detection when moving away
+          if (s.lastPoppedTargetId !== null) {
+            const lastTarget = pixelTargets.find(t => t.id === s.lastPoppedTargetId);
+            if (lastTarget) {
+              const dx = head.x - lastTarget.x;
+              const dy = head.y - lastTarget.y;
+              const dist = Math.sqrt(dx * dx + dy * dy);
+              if (dist > 35) {
+                s.lastPoppedTargetId = null;
+              }
+            } else {
+              s.lastPoppedTargetId = null;
+            }
+          }
+        }
+      }
+
+      // Draw and update active ripples
+      for (let i = s.ripples.length - 1; i >= 0; i--) {
+        const r = s.ripples[i]!;
+        r.age++;
+        if (r.age >= r.maxAge) {
+          s.ripples.splice(i, 1);
+          continue;
+        }
+        const progress = r.age / r.maxAge;
+        const radius = 10 + progress * 25;
+        const alpha = (1 - progress) * 0.4;
+
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, radius, 0, Math.PI * 2);
+        ctx.strokeStyle = r.color.replace('0.5', `${alpha}`);
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      // Draw and update active particles (ink drop burst)
+      for (let i = s.particles.length - 1; i >= 0; i--) {
+        const p = s.particles[i]!;
+        p.age++;
+        if (p.age >= p.maxAge) {
+          s.particles.splice(i, 1);
+          continue;
+        }
+
+        p.x += p.vx * 0.15;
+        p.y += p.vy * 0.15;
+        p.vx *= 0.93;
+        p.vy *= 0.93;
+
+        const progress = p.age / p.maxAge;
+        const alpha = (1 - progress) * 0.5;
+        const size = 3 * (1 - progress);
+
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, size, 0, Math.PI * 2);
+        ctx.fillStyle = p.color.replace('0.5', `${alpha}`);
         ctx.fill();
       }
     };
@@ -203,7 +367,7 @@ export const Splash = () => {
               Start
             </button>
             <button
-              className="action-button action-secondary px-8 py-3 rounded-full"
+              className="action-button action-secondary px-8 py-3 rounded-full border"
               onClick={() => setShowHowToPlay(true)}
             >
               How to Play
