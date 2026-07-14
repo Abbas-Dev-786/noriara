@@ -293,10 +293,6 @@ function createDailyLineScene(Phaser: PhaserModule) {
     const palette = this.getPalette();
 
     for (const hazard of puzzle.hazards) {
-      this.graphics.fillStyle(palette.hazardAura, 1);
-      this.graphics.fillCircle(hazard.x, hazard.y, hazard.r + 6);
-      this.graphics.lineStyle(this.settings.highContrast ? 3 : 2, palette.hazardRing, 0.9);
-      this.graphics.strokeCircle(hazard.x, hazard.y, hazard.r + 3);
       this.graphics.fillStyle(palette.hazardCore, 1);
       this.graphics.fillCircle(hazard.x, hazard.y, hazard.r);
     }
@@ -306,13 +302,15 @@ function createDailyLineScene(Phaser: PhaserModule) {
     const palette = this.getPalette();
     const pulseScale = this.settings.reducedMotion ? 1 : 1 + Math.sin(this.time.now / 150) * 0.08;
     
-    for (const target of this.activeTargets) {
-      this.graphics.fillStyle(palette.targetGlow, this.settings.highContrast ? 0.32 : 0.2);
+    for (let i = 0; i < this.activeTargets.length; i++) {
+      const target = this.activeTargets[i];
+      if (!target) continue;
+      const targetColor = palette.targetColors[i % palette.targetColors.length] ?? palette.targetColors[0]!;
+      
+      this.graphics.fillStyle(targetColor, this.settings.highContrast ? 0.32 : 0.3);
       this.graphics.fillCircle(target.x, target.y, (target.r + 8) * pulseScale);
-      this.graphics.fillStyle(palette.targetFill, 1);
+      this.graphics.fillStyle(targetColor, 1);
       this.graphics.fillCircle(target.x, target.y, target.r * pulseScale);
-      this.graphics.lineStyle(this.settings.highContrast ? 3 : 2, palette.targetRing, 0.95);
-      this.graphics.strokeCircle(target.x, target.y, (target.r - 4) * pulseScale);
     }
   }
 
@@ -331,7 +329,7 @@ function createDailyLineScene(Phaser: PhaserModule) {
     const palette = this.getPalette();
 
     // Outer glow pass.
-    this.graphics.lineStyle(LINE_WIDTH + (this.settings.highContrast ? 5 : 4), palette.lineGlow, this.settings.highContrast ? 0.34 : 0.12);
+    this.graphics.lineStyle(LINE_WIDTH + (this.settings.highContrast ? 5 : 4), palette.lineGlow, this.settings.highContrast ? 0.34 : 0.2);
     this.graphics.beginPath();
     this.graphics.moveTo(pathToRender[0]!.x, pathToRender[0]!.y);
     for (let i = 1; i < pathToRender.length; i++) {
@@ -341,7 +339,7 @@ function createDailyLineScene(Phaser: PhaserModule) {
     this.graphics.strokePath();
 
     // Core line
-    this.graphics.lineStyle(this.settings.highContrast ? LINE_WIDTH + 1 : LINE_WIDTH, palette.lineCore, 1);
+    this.graphics.lineStyle(this.settings.highContrast ? LINE_WIDTH + 1 : LINE_WIDTH, palette.lineCore, 0.9);
     this.graphics.beginPath();
     this.graphics.moveTo(pathToRender[0]!.x, pathToRender[0]!.y);
     for (let i = 1; i < pathToRender.length; i++) {
@@ -354,7 +352,7 @@ function createDailyLineScene(Phaser: PhaserModule) {
     const headPt = pathToRender[pathToRender.length - 1]!;
     const tailPt = pathToRender[0]!;
     const halfW = (this.settings.highContrast ? LINE_WIDTH + 1 : LINE_WIDTH) / 2;
-    this.graphics.fillStyle(palette.lineCore, 1);
+    this.graphics.fillStyle(palette.lineCore, 0.9);
     this.graphics.fillCircle(tailPt.x, tailPt.y, halfW);
     this.graphics.fillCircle(headPt.x, headPt.y, halfW);
 
@@ -415,6 +413,20 @@ function createDailyLineScene(Phaser: PhaserModule) {
         t: this.currentAttemptStartMs,
       },
     ];
+    
+    // Ink ripple on touch
+    if (!this.settings.reducedMotion) {
+      this.popEffects.push({
+        x: point.x,
+        y: point.y,
+        age: 0,
+        maxAge: 200,
+      });
+    }
+    
+    // Brush swiping sound
+    this.playTone(180, 0.05, 0.015);
+    
     this.renderScene();
   }
 
@@ -484,21 +496,22 @@ function createDailyLineScene(Phaser: PhaserModule) {
         maxAge: 220,
       });
 
-      for (let i = 0; i < 8; i++) {
-        const angle = (Math.PI * 2 * i) / 8 + Math.random() * 0.2;
-        const speed = 60 + Math.random() * 40;
+      for (let i = 0; i < 6; i++) {
+        const angle = (Math.PI * 2 * i) / 6 + Math.random() * 0.2;
+        const speed = 40 + Math.random() * 30;
         this.particles.push({
           x: target.x,
           y: target.y,
           vx: Math.cos(angle) * speed,
           vy: Math.sin(angle) * speed,
           age: 0,
-          maxAge: 400 + Math.random() * 200,
-          color: this.getPalette().targetFill,
+          maxAge: 300 + Math.random() * 100,
+          color: this.getPalette().pop, // Sumi ink droplets
         });
       }
     }
-    this.playTone(880, 0.06, 0.02);
+    // Pentatonic scale chime (higher frequency)
+    this.playTone(1046, 0.08, 0.02); // C6
     this.vibrate(16);
   }
 
@@ -517,7 +530,8 @@ function createDailyLineScene(Phaser: PhaserModule) {
     if (!this.settings.reducedMotion) {
       this.cameras.main.shake(180, 0.008);
     }
-    this.playTone(180, 0.18, 0.045);
+    // Deep dissonant thud
+    this.playTone(80, 0.25, 0.06); 
     this.vibrate(26);
 
     if (hitPoint) {
@@ -696,15 +710,28 @@ function createDailyLineScene(Phaser: PhaserModule) {
   private applyBounce(point: Point): Point {
     const { x } = point;
     let { y } = point;
+    let bounced = false;
 
     while (y < 0 || y > GAME_HEIGHT) {
       if (y < 0) {
         y = -y;
         this.yDir *= -1;
+        bounced = true;
       } else if (y > GAME_HEIGHT) {
         y = GAME_HEIGHT - (y - GAME_HEIGHT);
         this.yDir *= -1;
+        bounced = true;
       }
+    }
+
+    if (bounced && !this.settings.reducedMotion) {
+      // Subtle ripple splash on edge
+      this.popEffects.push({
+        x: x,
+        y: y,
+        age: 0,
+        maxAge: 180,
+      });
     }
 
     return { x, y };
@@ -786,8 +813,7 @@ function createDailyLineScene(Phaser: PhaserModule) {
         hazardAura: 0x282c38,
         hazardRing: 0xffffff,
         hazardCore: 0x000000,
-        targetGlow: 0xff80a0,
-        targetFill: 0xff2050,
+        targetColors: [0xff2050, 0x20ff50, 0x2050ff],
         targetRing: 0xffffff,
         lineGlow: 0xffffff,
         lineCore: 0xffff00,
@@ -798,19 +824,18 @@ function createDailyLineScene(Phaser: PhaserModule) {
     }
 
     return {
-      background: 0xf8fafc,
-      boundary: 0xcbd5e1,
-      hazardAura: 0xfee2e2,
-      hazardRing: 0xf87171,
-      hazardCore: 0xef4444,
-      targetGlow: 0xc7d2fe,
-      targetFill: 0x6366f1,
-      targetRing: 0xffffff,
-      lineGlow: 0x64748b,
-      lineCore: 0x0f172a,
-      pop: 0x10b981,
-      failureFill: 0xfecaca,
-      failureRing: 0xef4444,
+      background: 0xf9f6f0, // Washi Cream
+      boundary: 0xeae5db, // Washi Shadow
+      hazardAura: 0x0b0c10, // Obsidian
+      hazardRing: 0x0b0c10, // Obsidian
+      hazardCore: 0x0b0c10, // Obsidian
+      targetColors: [0x2b59c3, 0x2e8b57, 0xc83e4d], // Lapis Blue, Jade Green, Crimson
+      targetRing: 0xffffff, // Unused? Let's leave for now
+      lineGlow: 0x4a5568, // Faded Ink
+      lineCore: 0x1c2026, // Sumi Ink
+      pop: 0x1c2026, // Sumi ink color for droplets
+      failureFill: 0x0b0c10, // Obsidian
+      failureRing: 0x0b0c10, // Obsidian
     };
   }
 

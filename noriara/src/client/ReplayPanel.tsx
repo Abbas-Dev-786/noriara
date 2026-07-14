@@ -129,7 +129,7 @@ function drawReplayFrame(
   playbackMs: number
 ) {
   context.clearRect(0, 0, 600, 400);
-  context.fillStyle = '#f8fafc';
+  context.fillStyle = '#f9f6f0';
   context.fillRect(0, 0, 600, 400);
 
   const activeSegment = timeline.segments.find((segment) => {
@@ -187,7 +187,7 @@ function drawReplayFrame(
           const progress = ageMs / 400;
           const radius = target.r + progress * 20;
           const alpha = 1 - Math.pow(progress, 2);
-          context.strokeStyle = `rgba(16, 185, 129, ${alpha})`;
+          context.strokeStyle = `rgba(28, 32, 38, ${alpha})`;
           context.lineWidth = 2;
           context.beginPath();
           context.arc(target.x, target.y, radius, 0, Math.PI * 2);
@@ -204,21 +204,21 @@ function drawReplayFrame(
 
   const alpha = 1 - (ageMs / 1000);
   if (activeSegment.result === 'failure') {
-    context.fillStyle = `rgba(239, 68, 68, ${alpha * 0.45})`;
+    context.fillStyle = `rgba(11, 12, 16, ${alpha * 0.8})`;
     context.beginPath();
     context.arc(headPos.x, headPos.y, 25 + (ageMs / 40), 0, Math.PI * 2);
     context.fill();
     return;
   }
 
-  context.fillStyle = `rgba(16, 185, 129, ${alpha * 0.35})`;
+  context.fillStyle = `rgba(28, 32, 38, ${alpha * 0.35})`;
   context.beginPath();
   context.arc(headPos.x, headPos.y, 30 + (ageMs / 30), 0, Math.PI * 2);
   context.fill();
 }
 
 function drawReplayBounds(context: CanvasRenderingContext2D) {
-  context.strokeStyle = '#cbd5e1';
+  context.strokeStyle = '#eae5db';
   context.lineWidth = 2;
   context.beginPath();
   context.moveTo(0, 2);
@@ -230,16 +230,7 @@ function drawReplayBounds(context: CanvasRenderingContext2D) {
 
 function drawReplayHazards(context: CanvasRenderingContext2D, hazards: Array<{ x: number; y: number; r: number }>) {
   for (const hazard of hazards) {
-    context.fillStyle = '#fee2e2';
-    context.beginPath();
-    context.arc(hazard.x, hazard.y, hazard.r + 6, 0, Math.PI * 2);
-    context.fill();
-    context.strokeStyle = '#f87171';
-    context.lineWidth = 2;
-    context.beginPath();
-    context.arc(hazard.x, hazard.y, hazard.r + 3, 0, Math.PI * 2);
-    context.stroke();
-    context.fillStyle = '#ef4444';
+    context.fillStyle = '#0b0c10';
     context.beginPath();
     context.arc(hazard.x, hazard.y, hazard.r, 0, Math.PI * 2);
     context.fill();
@@ -247,27 +238,28 @@ function drawReplayHazards(context: CanvasRenderingContext2D, hazards: Array<{ x
 }
 
 function drawReplayTargets(context: CanvasRenderingContext2D, targets: Array<{ x: number; y: number; r: number }>) {
-  for (const target of targets) {
-    context.fillStyle = 'rgba(199, 210, 254, 0.5)';
+  const targetColors = ['#2b59c3', '#2e8b57', '#c83e4d'];
+  targets.forEach((target, i) => {
+    const targetColor = targetColors[i % targetColors.length]!;
+    
+    context.globalAlpha = 0.3;
+    context.fillStyle = targetColor;
     context.beginPath();
     context.arc(target.x, target.y, target.r + 8, 0, Math.PI * 2);
     context.fill();
-    context.fillStyle = '#6366f1';
+    
+    context.globalAlpha = 1.0;
+    context.fillStyle = targetColor;
     context.beginPath();
     context.arc(target.x, target.y, target.r, 0, Math.PI * 2);
     context.fill();
-    context.strokeStyle = '#fff';
-    context.lineWidth = 2;
-    context.beginPath();
-    context.arc(target.x, target.y, target.r - 4, 0, Math.PI * 2);
-    context.stroke();
-  }
+  });
 }
 
 function drawReplayLine(context: CanvasRenderingContext2D, path: Point[]) {
   if (path.length < 2) return;
 
-  context.strokeStyle = 'rgba(100, 116, 139, 0.25)';
+  context.strokeStyle = 'rgba(74, 85, 104, 0.2)';
   context.lineWidth = 10;
   context.lineJoin = 'round';
   context.lineCap = 'round';
@@ -278,7 +270,7 @@ function drawReplayLine(context: CanvasRenderingContext2D, path: Point[]) {
   }
   context.stroke();
 
-  context.strokeStyle = '#0f172a';
+  context.strokeStyle = 'rgba(28, 32, 38, 0.9)';
   context.lineWidth = 6;
   context.beginPath();
   context.moveTo(path[0]!.x, path[0]!.y);
@@ -286,6 +278,14 @@ function drawReplayLine(context: CanvasRenderingContext2D, path: Point[]) {
     context.lineTo(path[i]!.x, path[i]!.y);
   }
   context.stroke();
+  
+  context.fillStyle = 'rgba(28, 32, 38, 0.9)';
+  context.beginPath();
+  context.arc(path[0]!.x, path[0]!.y, 3, 0, Math.PI * 2);
+  context.fill();
+  context.beginPath();
+  context.arc(path[path.length - 1]!.x, path[path.length - 1]!.y, 3, 0, Math.PI * 2);
+  context.fill();
 }
 
 function getCollectedTargetIndexes(

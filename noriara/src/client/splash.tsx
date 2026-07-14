@@ -6,33 +6,11 @@ import { createRoot } from 'react-dom/client';
 
 /* Animated background canvas */
 
-interface FloatingTarget {
-  x: number;
-  y: number;
-  r: number;
-  vx: number;
-  vy: number;
-  phase: number;
-}
+
 
 interface SnakeSegment {
   x: number;
   y: number;
-}
-
-function createFloatingTargets(w: number, h: number): FloatingTarget[] {
-  const targets: FloatingTarget[] = [];
-  for (let i = 0; i < 6; i++) {
-    targets.push({
-      x: Math.random() * w,
-      y: Math.random() * h,
-      r: 6 + Math.random() * 8,
-      vx: (Math.random() - 0.5) * 0.3,
-      vy: (Math.random() - 0.5) * 0.3,
-      phase: Math.random() * Math.PI * 2,
-    });
-  }
-  return targets;
 }
 
 function createSnake(w: number, h: number): SnakeSegment[] {
@@ -53,7 +31,6 @@ function useBackgroundCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<{
     snake: SnakeSegment[];
-    targets: FloatingTarget[];
     frame: number;
     offset: number;
   } | null>(null);
@@ -76,7 +53,6 @@ function useBackgroundCanvas() {
       ctx.scale(dpr, dpr);
       stateRef.current = {
         snake: createSnake(rect.width, rect.height),
-        targets: createFloatingTargets(rect.width, rect.height),
         frame: 0,
         offset: 0,
       };
@@ -97,28 +73,7 @@ function useBackgroundCanvas() {
       s.offset += 0.4;
       s.frame++;
 
-      // Draw floating targets
-      for (const t of s.targets) {
-        t.x += t.vx;
-        t.y += t.vy;
-        if (t.x < -20) t.x = w + 20;
-        if (t.x > w + 20) t.x = -20;
-        if (t.y < -20) t.y = h + 20;
-        if (t.y > h + 20) t.y = -20;
 
-        const pulse = 1 + Math.sin(s.frame * 0.03 + t.phase) * 0.15;
-        const r = t.r * pulse;
-
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, r + 6, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(208, 157, 134, 0.25)';
-        ctx.fill();
-
-        ctx.beginPath();
-        ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(160, 79, 55, 0.15)';
-        ctx.fill();
-      }
 
       // Draw animated snake trail
       const snakeLen = s.snake.length;
@@ -139,7 +94,7 @@ function useBackgroundCanvas() {
           ctx.beginPath();
           ctx.moveTo(prev.x, prev.y);
           ctx.lineTo(seg.x, seg.y);
-          ctx.strokeStyle = `rgba(41, 35, 29, ${progress * 0.12})`;
+          ctx.strokeStyle = `rgba(28, 32, 38, ${progress * 0.12})`;
           ctx.lineWidth = 3 + progress * 2;
           ctx.stroke();
         }
@@ -149,7 +104,7 @@ function useBackgroundCanvas() {
         const head = s.snake[headIdx]!;
         ctx.beginPath();
         ctx.arc(head.x, head.y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(41, 35, 29, 0.18)';
+        ctx.fillStyle = 'rgba(28, 32, 38, 0.18)';
         ctx.fill();
       }
     };
@@ -164,6 +119,45 @@ function useBackgroundCanvas() {
 
   return canvasRef;
 }
+
+/* DOM-based targets with backdrop blur */
+const TargetLayer = () => {
+  const targets = useRef(
+    Array.from({ length: 6 }).map((_, i) => {
+      const colors = ['rgba(43, 89, 195, 0.5)', 'rgba(46, 139, 87, 0.5)', 'rgba(200, 62, 77, 0.5)'];
+      return {
+        id: i,
+        x: 10 + Math.random() * 80,
+        y: 10 + Math.random() * 80,
+        size: 30 + Math.random() * 30, // 30-60px
+        color: colors[i % colors.length],
+        delay: Math.random() * 4,
+        animDuration: 10 + Math.random() * 10, // 10-20s float
+      };
+    })
+  ).current;
+
+  return (
+    <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
+      {targets.map((t) => (
+        <div
+          key={t.id}
+          className="absolute rounded-full backdrop-blur-sm"
+          style={{
+            left: `${t.x}%`,
+            top: `${t.y}%`,
+            width: `${t.size}px`,
+            height: `${t.size}px`,
+            backgroundColor: t.color,
+            animation: `float-anim ${t.animDuration}s ease-in-out infinite alternate, pulse-anim 4s ease-in-out infinite alternate`,
+            animationDelay: `${t.delay}s`,
+            boxShadow: 'inset 0 0 10px rgba(255,255,255,0.3)',
+          }}
+        />
+      ))}
+    </div>
+  );
+};
 
 /* Splash component */
 
@@ -180,31 +174,50 @@ export const Splash = () => {
         style={{ opacity: 0.6 }}
       />
 
+      <TargetLayer />
+
       <div className="motion-rise relative z-10 mx-auto w-full max-w-xl">
         <section className="surface-panel-strong rounded-[30px] px-6 py-8 text-center sm:px-8 sm:py-10">
 
-          <h1 className="display-title brush-stroke mt-4 text-4xl sm:text-5xl">Noriara</h1>
-          <p className="body-copy mx-auto mt-4 max-w-md text-sm sm:text-base">
+          <div className="relative inline-block mt-2">
+            <h1 className="display-title relative z-10 text-4xl sm:text-5xl">Noriara</h1>
+            <svg
+              className="absolute left-0 right-0 bottom-2 w-full h-[15px] z-0 text-slate-800 opacity-20"
+              viewBox="0 0 100 20"
+              preserveAspectRatio="none"
+              style={{
+                strokeDasharray: '100',
+                strokeDashoffset: '100',
+                animation: 'draw-stroke 4s cubic-bezier(0.4, 0, 0.2, 1) infinite'
+              }}
+            >
+              <path d="M0,12 Q25,22 50,12 T100,12" fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" />
+            </svg>
+          </div>
+
+          <p className="body-copy mx-auto mt-4 max-w-md text-sm sm:text-base text-slate-500">
             One stroke. Thirty seconds. The same board.
           </p>
 
-          <div className="mt-7 flex flex-wrap justify-center gap-3">
+          <div className="mt-10 flex flex-wrap justify-center gap-3">
             <button
-              className="action-button action-primary"
+              className="action-button action-primary px-8 py-3 rounded-full"
               onClick={(e) => requestExpandedMode(e.nativeEvent, 'game')}
             >
               Start
             </button>
             <button
-              className="action-button action-secondary"
+              className="action-button action-secondary px-8 py-3 rounded-full"
               onClick={() => setShowHowToPlay(true)}
             >
               How to Play
             </button>
           </div>
-
-          <div className="mt-6 text-xs ink-muted">{context.username ?? 'Guest'} session</div>
         </section>
+      </div>
+
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-slate-400 opacity-50 z-10 pointer-events-none">
+        {context.username ?? 'Guest'} session
       </div>
 
       {showHowToPlay && (
