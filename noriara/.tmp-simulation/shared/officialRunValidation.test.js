@@ -14,6 +14,7 @@ function run() {
     testRejectsImpossibleGesture();
     testRejectsTelemetryOverAttemptBudget();
     testRejectsTelemetryOverPointBudget();
+    testRejectsNonDailyRunVariant();
     testSubmissionWindowGrace();
     console.log('officialRunValidation tests passed');
 }
@@ -99,6 +100,15 @@ function testRejectsTelemetryOverPointBudget() {
     const result = getOfficialRunTelemetryLimitError(payload.telemetry);
     assert(result === 'Submission exceeds the point budget.', 'expected point budget rejection');
 }
+function testRejectsNonDailyRunVariant() {
+    const payload = createValidPayload();
+    payload.runVariant = 'practiceSandbox';
+    const result = validateOfficialRunPayload(payload);
+    assert(result.accepted === false, 'expected non-daily variant to be rejected');
+    if (!result.accepted) {
+        assert(result.reason === 'Unsupported run variant.', 'expected unsupported variant rejection');
+    }
+}
 function testSubmissionWindowGrace() {
     const startedAt = 1_000;
     assert(isOfficialRunSubmissionWindowValid(startedAt, startedAt + MAX_OFFICIAL_RUN_DURATION_MS + MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS), 'expected submission at grace boundary to be accepted');
@@ -129,7 +139,10 @@ function createValidPayload() {
         runId: 'run-1',
         date,
         seed,
+        runVariant: 'daily',
         telemetry: {
+            generatorVersion: 2,
+            mechanics: ['core'],
             attempts: [attempt],
             solveEvents: [
                 {
@@ -173,7 +186,10 @@ function createStaticBodyExploitPayload() {
         runId: 'run-exploit',
         date,
         seed,
+        runVariant: 'daily',
         telemetry: {
+            generatorVersion: 2,
+            mechanics: ['core'],
             attempts: [attempt],
             solveEvents: [
                 {
@@ -249,7 +265,10 @@ function createStaticBodyHazardExploitPayload() {
         runId: 'run-hazard-exploit',
         date,
         seed,
+        runVariant: 'daily',
         telemetry: {
+            generatorVersion: 2,
+            mechanics: ['core'],
             attempts: [...preludeAttempts, attempt],
             solveEvents: preludeSolveEvents,
             failureEvents: [

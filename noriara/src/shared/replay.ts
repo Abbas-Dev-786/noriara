@@ -7,6 +7,7 @@ export interface ReplayData {
   date: string;
   seed: string;
   runVariant: RunVariant;
+  puzzleCount: number;
   username: string;
   score: number;
   puzzlesSolved: number;
@@ -55,6 +56,7 @@ export function createReplayData(
   date: string,
   seed: string,
   runVariant: RunVariant,
+  puzzleCount: number,
   score: number,
   puzzlesSolved: number,
   rank: number | null,
@@ -66,6 +68,7 @@ export function createReplayData(
     date,
     seed,
     runVariant,
+    puzzleCount,
     username,
     score,
     puzzlesSolved,
@@ -78,7 +81,8 @@ export function createReplayData(
 export function validateReplay(replay: ReplayData): boolean {
   if (replay.version !== 1) return false;
   if (!replay.seed || !replay.username || !replay.date) return false;
-  if (replay.runVariant !== 'daily') return false;
+  if (replay.runVariant !== 'daily' && replay.runVariant !== 'event') return false;
+  if (!Number.isInteger(replay.puzzleCount) || replay.puzzleCount <= 0 || replay.puzzleCount > 120) return false;
   if (replay.telemetry.attempts.length > MAX_REPLAY_ATTEMPTS) return false;
 
   let pointCount = 0;
@@ -90,7 +94,12 @@ export function validateReplay(replay: ReplayData): boolean {
 }
 
 export function buildReplayTimeline(replay: ReplayData): ReplayTimeline {
-  const puzzles = generatePuzzlesForSeed(replay.seed);
+  const puzzles = generatePuzzlesForSeed(
+    replay.seed,
+    replay.puzzleCount,
+    undefined,
+    replay.runVariant === 'event'
+  );
   const segments = replay.telemetry.attempts
     .map((attempt) => buildReplaySegment(attempt, puzzles[attempt.puzzleIndex]))
     .filter((segment): segment is ReplaySegment => segment !== null);

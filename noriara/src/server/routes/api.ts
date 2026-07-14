@@ -40,7 +40,17 @@ const PREVIEW_LIMIT = 5;
 const LEADERBOARD_LIMIT = 25;
 const DAILY_RUN_VARIANT = 'daily' as const;
 
+import { archive } from './archive';
+import { admin } from './admin';
+import { event } from './event';
+import { community } from './community';
+
 export const api = new Hono();
+
+api.route('/archive', archive);
+api.route('/admin', admin);
+api.route('/event', event);
+api.route('/community', community);
 
 api.get('/health', (c) => {
   return c.json<HealthResponse>({
@@ -50,7 +60,7 @@ api.get('/health', (c) => {
 });
 
 api.get('/bootstrap', async (c) => {
-  const { date, seed } = getCurrentDailySeed();
+  const { date, seed } = await getCurrentDailySeed();
   const username = await reddit.getCurrentUsername();
   const loggedIn = Boolean(username);
 
@@ -77,7 +87,7 @@ api.get('/bootstrap', async (c) => {
 });
 
 api.post('/run/start', async (c) => {
-  const { date, seed } = getCurrentDailySeed();
+  const { date, seed } = await getCurrentDailySeed();
   const username = await reddit.getCurrentUsername();
 
   if (!username) {
@@ -139,7 +149,7 @@ api.post('/run/start', async (c) => {
 api.post('/run/submit', async (c) => {
   const username = await reddit.getCurrentUsername();
   const payload = await c.req.json<SubmitRunRequest>();
-  const { date, seed } = getCurrentDailySeed();
+  const { date, seed } = await getCurrentDailySeed();
 
   if (!username) {
     return c.json<SubmitRunResponse>({
@@ -371,6 +381,7 @@ api.post('/run/submit', async (c) => {
     date,
     seed,
     DAILY_RUN_VARIANT,
+    30,
     validation.finalScore,
     validation.puzzlesSolved,
     rank,
@@ -404,7 +415,7 @@ api.post('/run/submit', async (c) => {
 });
 
 api.get('/leaderboard', async (c) => {
-  const { date: currentDate } = getCurrentDailySeed();
+  const { date: currentDate } = await getCurrentDailySeed();
   const date = c.req.query('date') ?? currentDate;
   const username = await reddit.getCurrentUsername();
   const [entries, currentUserRank] = await Promise.all([
@@ -432,7 +443,7 @@ api.get('/stats', async (c) => {
 
 api.get('/replay/:username', async (c) => {
   const requestedUsername = c.req.param('username');
-  const { date: currentDate } = getCurrentDailySeed();
+  const { date: currentDate } = await getCurrentDailySeed();
   const date = c.req.query('date') ?? currentDate;
   const viewerUsername = await reddit.getCurrentUsername();
   const replay = await getReplay(date, requestedUsername, viewerUsername ?? null);
@@ -505,12 +516,29 @@ api.post('/decrement', async (c) => {
   });
 });
 
-function getCurrentDailySeed() {
+import type { LiveOpsConfig } from '../../shared/api';
+
+async function getLiveOpsConfig(): Promise<LiveOpsConfig | null> {
+  const raw = await redis.get('liveops:config');
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as LiveOpsConfig;
+  } catch {
+    return null;
+  }
+}
+
+async function getCurrentDailySeed() {
   const date = new Date().toISOString().slice(0, 10);
-  return {
-    date,
-    seed: generateSeed(date),
-  };
+  const liveOps = await getLiveOpsConfig();
+  
+  if (liveOps?.disabledDates?.includes(date)) {
+    return { date, seed: 'DISABLED' }; // Or throw error
+  }
+  
+  const seed = liveOps?.overriddenSeeds?.[date] ?? generateSeed(date);
+  
+  return { date, seed };
 }
 
 function getLeaderboardKey(date: string) {
@@ -602,7 +630,7 @@ async function getCurrentUserRank(date: string, username: string): Promise<numbe
   return totalEntries - ascendingRank;
 }
 
-async function getLeaderboardEntries(
+export async function getLeaderboardEntries(
   date: string,
   currentUsername: string | null,
   limit: number

@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import type { Point } from '../shared/geom';
+import { smoothPath, type Point } from '../shared/geom';
 import { buildReplayTimeline, type ReplayData } from '../shared/replay';
 
 const REPLAY_STEP_MS = 10;
+const SUCCESS_ADVANCE_DELAY_MS = 220;
+const FAILURE_RESET_DELAY_MS = 320;
 
 export const ReplayPanel = ({ replay, error }: { replay: ReplayData | null; error?: string | null }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -131,8 +133,7 @@ function drawReplayFrame(
   context.fillRect(0, 0, 600, 400);
 
   const activeSegment = timeline.segments.find((segment) => {
-    const locomotionEnd = segment.attempt.releaseTimestampMs + segment.resultElapsedMs;
-    return playbackMs >= segment.attempt.startedAtMs && playbackMs <= locomotionEnd;
+    return playbackMs >= segment.attempt.startedAtMs && playbackMs <= getSegmentVisibleEndMs(segment);
   });
 
   const fallbackPuzzleIndex = activeSegment?.attempt.puzzleIndex ?? getLatestSolvedPuzzleIndex(timeline, playbackMs);
@@ -152,9 +153,12 @@ function drawReplayFrame(
   drawReplayTargets(context, activeTargets);
 
   if (playbackMs <= activeSegment.attempt.releaseTimestampMs) {
-    const partialPath = activeSegment.attempt.points
-      .filter((point) => point.t <= playbackMs)
-      .map((point) => ({ x: point.x, y: point.y }));
+    const partialPath = smoothPath(
+      activeSegment.attempt.points
+        .filter((point) => point.t <= playbackMs)
+        .map((point) => ({ x: point.x, y: point.y })),
+      2
+    );
     drawReplayLine(context, partialPath);
     return;
   }
@@ -309,12 +313,17 @@ function getCollectedTargetIndexes(
 function getLatestSolvedPuzzleIndex(timeline: ReturnType<typeof buildReplayTimeline>, playbackMs: number) {
   let index = 0;
   for (const segment of timeline.segments) {
-    const segmentEnd = segment.attempt.releaseTimestampMs + segment.resultElapsedMs;
+    const segmentEnd = getSegmentVisibleEndMs(segment);
     if (playbackMs >= segmentEnd && segment.result === 'success') {
       index = Math.min(timeline.puzzles.length - 1, segment.attempt.puzzleIndex + 1);
     }
   }
   return index;
+}
+
+function getSegmentVisibleEndMs(segment: ReturnType<typeof buildReplayTimeline>['segments'][number]) {
+  const resultAtMs = segment.attempt.releaseTimestampMs + segment.resultElapsedMs;
+  return resultAtMs + (segment.result === 'success' ? SUCCESS_ADVANCE_DELAY_MS : FAILURE_RESET_DELAY_MS);
 }
 
 function formatReplayTime(ms: number) {

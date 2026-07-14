@@ -1,19 +1,33 @@
 {
-  "generatedAt": "2026-07-12T06:26:21.693Z",
+  "generatedAt": "2026-07-14T03:41:04.538Z",
   "seedCount": 100,
   "suspiciousSeeds": [],
   "rejectionHeavySeeds": [
     {
       "seed": "sim-seed-96",
-      "totalRejections": 357,
+      "totalRejections": 427,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 346
+          "count": 400
         },
         {
           "reason": "target_target_too_close",
-          "count": 10
+          "count": 27
+        }
+      ]
+    },
+    {
+      "seed": "sim-seed-59",
+      "totalRejections": 417,
+      "dominantReasons": [
+        {
+          "reason": "target_hazard_too_close",
+          "count": 411
+        },
+        {
+          "reason": "target_target_too_close",
+          "count": 5
         },
         {
           "reason": "hazard_hazard_too_close",
@@ -22,16 +36,16 @@
       ]
     },
     {
-      "seed": "sim-seed-59",
-      "totalRejections": 353,
+      "seed": "sim-seed-94",
+      "totalRejections": 357,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 334
+          "count": 339
         },
         {
           "reason": "target_target_too_close",
-          "count": 18
+          "count": 17
         },
         {
           "reason": "hazard_hazard_too_close",
@@ -41,15 +55,15 @@
     },
     {
       "seed": "sim-seed-30",
-      "totalRejections": 336,
+      "totalRejections": 339,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 325
+          "count": 332
         },
         {
           "reason": "target_target_too_close",
-          "count": 10
+          "count": 6
         },
         {
           "reason": "hazard_hazard_too_close",
@@ -59,15 +73,15 @@
     },
     {
       "seed": "sim-seed-38",
-      "totalRejections": 335,
+      "totalRejections": 337,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 321
+          "count": 324
         },
         {
           "reason": "target_target_too_close",
-          "count": 13
+          "count": 12
         },
         {
           "reason": "hazard_hazard_too_close",
@@ -76,68 +90,68 @@
       ]
     },
     {
-      "seed": "sim-seed-9",
-      "totalRejections": 318,
+      "seed": "sim-seed-84",
+      "totalRejections": 333,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 290
+          "count": 299
         },
         {
           "reason": "target_target_too_close",
-          "count": 28
-        }
-      ]
-    },
-    {
-      "seed": "sim-seed-29",
-      "totalRejections": 295,
-      "dominantReasons": [
-        {
-          "reason": "target_hazard_too_close",
-          "count": 286
-        },
-        {
-          "reason": "target_target_too_close",
-          "count": 8
-        },
-        {
-          "reason": "hazard_hazard_too_close",
-          "count": 1
+          "count": 34
         }
       ]
     },
     {
       "seed": "sim-seed-6",
-      "totalRejections": 281,
+      "totalRejections": 301,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 259
+          "count": 285
         },
         {
           "reason": "target_target_too_close",
-          "count": 22
-        }
-      ]
-    },
-    {
-      "seed": "sim-seed-35",
-      "totalRejections": 279,
-      "dominantReasons": [
-        {
-          "reason": "target_hazard_too_close",
-          "count": 273
-        },
-        {
-          "reason": "target_target_too_close",
-          "count": 6
+          "count": 16
         }
       ]
     },
     {
       "seed": "sim-seed-81",
-      "totalRejections": 272,
+      "totalRejections": 301,
+      "dominantReasons": [
+        {
+          "reason": "target_hazard_too_close",
+          "count": 285
+        },
+        {
+          "reason": "target_target_too_close",
+          "count": 16
+        }
+      ]
+    },
+    {
+      "seed": "sim-seed-29",
+      "totalRejections": 285,
+      "dominantReasons": [
+        {
+          "reason": "target_hazard_too_close",
+          "count": 277
+        },
+        {
+          "reason": "target_target_too_close",
+          "count": 7
+        },
+        {
+          "reason": "hazard_hazard_too_close",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "seed": "sim-seed-39",
+      "totalRejections": 271,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
@@ -145,21 +159,71 @@
         },
         {
           "reason": "target_target_too_close",
+          "count": 18
+        },
+        {
+          "reason": "hazard_hazard_too_close",
+          "count": 2
+        }
+      ]
+    },
+    {
+      "seed": "sim-seed-9",
+      "totalRejections": 265,
+      "dominantReasons": [
+        {
+          "reason": "target_hazard_too_close",
+          "count": 249
+        },
+        {
+          "reason": "target_target_too_close",
+          "count": 16
+        }
+      ]
+    },
+    {
+      "seed": "sim-seed-12",
+      "totalRejections": 259,
+      "dominantReasons": [
+        {
+          "reason": "target_hazard_too_close",
+          "count": 237
+        },
+        {
+          "reason": "target_target_too_close",
           "count": 21
+        },
+        {
+          "reason": "hazard_hazard_too_close",
+          "count": 1
+        }
+      ]
+    },
+    {
+      "seed": "sim-seed-8",
+      "totalRejections": 258,
+      "dominantReasons": [
+        {
+          "reason": "target_hazard_too_close",
+          "count": 253
+        },
+        {
+          "reason": "target_target_too_close",
+          "count": 5
         }
       ]
     },
     {
       "seed": "sim-seed-31",
-      "totalRejections": 256,
+      "totalRejections": 246,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 239
+          "count": 237
         },
         {
           "reason": "target_target_too_close",
-          "count": 14
+          "count": 6
         },
         {
           "reason": "hazard_hazard_too_close",
@@ -168,54 +232,36 @@
       ]
     },
     {
-      "seed": "sim-seed-12",
-      "totalRejections": 251,
+      "seed": "sim-seed-41",
+      "totalRejections": 243,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 231
+          "count": 213
         },
         {
           "reason": "target_target_too_close",
-          "count": 19
-        },
-        {
-          "reason": "hazard_hazard_too_close",
-          "count": 1
+          "count": 30
         }
       ]
     },
     {
-      "seed": "sim-seed-99",
-      "totalRejections": 249,
+      "seed": "sim-seed-54",
+      "totalRejections": 243,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 230
+          "count": 205
         },
         {
           "reason": "target_target_too_close",
-          "count": 19
-        }
-      ]
-    },
-    {
-      "seed": "sim-seed-84",
-      "totalRejections": 247,
-      "dominantReasons": [
-        {
-          "reason": "target_hazard_too_close",
-          "count": 216
-        },
-        {
-          "reason": "target_target_too_close",
-          "count": 31
+          "count": 38
         }
       ]
     },
     {
       "seed": "sim-seed-19",
-      "totalRejections": 243,
+      "totalRejections": 237,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
@@ -223,71 +269,21 @@
         },
         {
           "reason": "target_target_too_close",
-          "count": 27
+          "count": 21
         }
       ]
     },
     {
-      "seed": "sim-seed-51",
-      "totalRejections": 243,
+      "seed": "sim-seed-24",
+      "totalRejections": 231,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 229
+          "count": 215
         },
         {
           "reason": "target_target_too_close",
-          "count": 12
-        },
-        {
-          "reason": "hazard_hazard_too_close",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "seed": "sim-seed-86",
-      "totalRejections": 239,
-      "dominantReasons": [
-        {
-          "reason": "target_hazard_too_close",
-          "count": 233
-        },
-        {
-          "reason": "target_target_too_close",
-          "count": 4
-        },
-        {
-          "reason": "hazard_hazard_too_close",
-          "count": 2
-        }
-      ]
-    },
-    {
-      "seed": "sim-seed-8",
-      "totalRejections": 235,
-      "dominantReasons": [
-        {
-          "reason": "target_hazard_too_close",
-          "count": 222
-        },
-        {
-          "reason": "target_target_too_close",
-          "count": 13
-        }
-      ]
-    },
-    {
-      "seed": "sim-seed-4",
-      "totalRejections": 222,
-      "dominantReasons": [
-        {
-          "reason": "target_hazard_too_close",
-          "count": 201
-        },
-        {
-          "reason": "target_target_too_close",
-          "count": 20
+          "count": 15
         },
         {
           "reason": "hazard_hazard_too_close",
@@ -296,30 +292,30 @@
       ]
     },
     {
-      "seed": "sim-seed-17",
-      "totalRejections": 218,
+      "seed": "sim-seed-37",
+      "totalRejections": 224,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 195
+          "count": 218
         },
         {
           "reason": "target_target_too_close",
-          "count": 23
+          "count": 6
         }
       ]
     },
     {
-      "seed": "sim-seed-66",
-      "totalRejections": 217,
+      "seed": "sim-seed-1",
+      "totalRejections": 222,
       "dominantReasons": [
         {
           "reason": "target_hazard_too_close",
-          "count": 179
+          "count": 209
         },
         {
           "reason": "target_target_too_close",
-          "count": 38
+          "count": 13
         }
       ]
     }

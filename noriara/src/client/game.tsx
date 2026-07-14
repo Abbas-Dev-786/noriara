@@ -17,7 +17,12 @@ import type {
   StartRunResponse,
   StatsResponse,
   SubmitRunResponse,
+  EventConfig,
+  EventCurrentResponse,
+  SubmittedRunSummary,
 } from '../shared/api';
+import { ArchiveView } from './ArchiveView';
+import { CommunityView } from './CommunityView';
 import type { ReplayData, ReplayResponse } from '../shared/replay';
 
 const ReplayPanel = lazy(() => import('./ReplayPanel'));
@@ -35,7 +40,7 @@ function preloadExpandedGameRuntime() {
 }
 
 type GameState = 'bootstrap' | 'ready' | 'playing' | 'results' | 'error';
-type PageView = 'home' | 'leaderboard' | 'stats' | 'settings' | 'replay';
+type PageView = 'home' | 'leaderboard' | 'stats' | 'settings' | 'replay' | 'archive' | 'event' | 'community';
 
 type RunResult = {
   score: number;
@@ -77,6 +82,9 @@ export const App = () => {
   const [runMode, setRunMode] = useState<RunMode>('practice');
   const [leaderboardEntries, setLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
   const [playerStats, setPlayerStats] = useState<PlayerStats | null>(null);
+  const [activeEvent, setActiveEvent] = useState<EventConfig | null>(null);
+  const [eventRun, setEventRun] = useState<SubmittedRunSummary | null>(null);
+  const [eventLeaderboardEntries, setEventLeaderboardEntries] = useState<LeaderboardEntry[]>([]);
   const [settings, setSettings] = useState<GameSettings>(() => loadStoredSettings());
   const [activeReplay, setActiveReplay] = useState<ReplayData | null>(null);
   const [replayError, setReplayError] = useState<string | null>(null);
@@ -96,8 +104,11 @@ export const App = () => {
   }) | null>(null);
   const pendingCountdownRef = useRef(false);
   const runModeRef = useRef<RunMode>('practice');
+  const runVariantRef = useRef<'daily' | 'event' | 'community'>('daily');
+  const communitySeedRef = useRef<string | null>(null);
   const officialRunIdRef = useRef<string | null>(null);
   const bootstrapRef = useRef<BootstrapResponse | null>(null);
+  const activeEventRef = useRef<EventConfig | null>(null);
   const settingsRef = useRef<GameSettings>(DEFAULT_GAME_SETTINGS);
 
   const dailyDate = bootstrap?.date ?? '';
@@ -139,6 +150,19 @@ export const App = () => {
       const data: BootstrapResponse = await res.json();
       setBootstrap(data);
       setLeaderboardEntries(data.leaderboardPreview);
+
+      fetch('/api/event/current')
+        .then(res => res.json())
+        .then((evtData: EventCurrentResponse) => {
+          if (evtData.status === 'ok' && evtData.activeEvent) {
+            setActiveEvent(evtData.activeEvent);
+            setEventRun(evtData.currentRun);
+            activeEventRef.current = evtData.activeEvent;
+            setEventLeaderboardEntries(evtData.leaderboardPreview);
+          }
+        })
+        .catch(console.error);
+
       setPlayerStats(data.playerStats);
       setGameState('ready');
       loadLocalBest(`${LOCAL_BEST_KEY}:${data.date}`);
@@ -193,14 +217,18 @@ export const App = () => {
     phaserSceneRef.current?.updateSettings(settings);
   }, [settings]);
 
-  const startLocalRun = useCallback((mode: RunMode, runId: string | null) => {
+  const startLocalRun = useCallback((mode: RunMode, variant: 'daily' | 'event' | 'community', runId: string | null, communitySeed?: string) => {
     runModeRef.current = mode;
+    runVariantRef.current = variant;
     officialRunIdRef.current = runId;
+    if (communitySeed) {
+      communitySeedRef.current = communitySeed;
+    }
 
     setRunMode(mode);
     setScore(0);
     setCombo(0);
-    setTimeMs(30000);
+    setTimeMs(variant === 'event' && activeEventRef.current ? activeEventRef.current.timerMs : 30000);
     setFinalResult(null);
     setSubmissionState({ status: 'idle' });
     setPageView('home');
@@ -222,15 +250,36 @@ export const App = () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const data: StartRunResponse = await res.json();
-      startLocalRun(data.mode, data.runId);
+      startLocalRun(data.mode, 'daily', data.runId);
     } catch (error) {
       console.error('Failed to start run', error);
-      startLocalRun('practice', null);
+      startLocalRun('practice', 'daily', null);
     }
   }, [startLocalRun]);
 
+  const handleEventStart = useCallback(async () => {
+    try {
+      const res = await fetch('/api/event/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+      const data: StartRunResponse = await res.json();
+      startLocalRun(data.mode, 'event', data.runId);
+    } catch (error) {
+      console.error('Failed to start event run', error);
+      startLocalRun('practice', 'event', null);
+    }
+  }, [startLocalRun]);
+
+  const handleCommunityStart = useCallback((layoutId: string, seed: string) => {
+    startLocalRun('practice', 'community', layoutId, seed);
+  }, [startLocalRun]);
+
   const handlePracticeStart = useCallback(() => {
-    startLocalRun('practice', null);
+    startLocalRun('practice', 'daily', null);
   }, [startLocalRun]);
 
   const submitOfficialRun = useCallback(
@@ -241,18 +290,22 @@ export const App = () => {
       result: RunResult,
       telemetry: RunTelemetry
     ) => {
-      const currentBootstrap = bootstrapRef.current;
-      if (!currentBootstrap) return;
-
+      setSubmissionState({ status: 'submitting' });
+      const submitVariant = runVariantRef.current;
+      const endpoint = submitVariant === 'event' ? '/api/event/submit' : '/api/run/submit';
+      
       try {
-        const res = await fetch('/api/run/submit', {
+        const res = await fetch(endpoint, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             runId,
             date: runDate,
-            seed: runSeed,
-            runVariant: 'daily',
+            seed: submitVariant === 'event' && activeEventRef.current ? activeEventRef.current.seed : runSeed,
+            runVariant: submitVariant,
+            finalScore: result.score,
+            puzzlesSolved: result.puzzlesSolved,
+            maxCombo: result.maxCombo,
             telemetry,
           }),
         });
@@ -318,10 +371,16 @@ export const App = () => {
 
         if (activeRunMode === 'official' && activeRunId && activeBootstrap) {
           setSubmissionState({ status: 'submitting' });
+          const submitDate = runVariantRef.current === 'event' && activeEventRef.current
+            ? activeEventRef.current.eventId
+            : activeBootstrap.date;
+          const submitSeed = runVariantRef.current === 'event' && activeEventRef.current
+            ? activeEventRef.current.seed
+            : activeBootstrap.seed;
           void submitOfficialRun(
             activeRunId,
-            activeBootstrap.date,
-            activeBootstrap.seed,
+            submitDate,
+            submitSeed,
             result,
             telemetry
           );
@@ -345,7 +404,23 @@ export const App = () => {
       if (disposed || !gameRef.current) {
         return;
       }
-      activeGame = await createGame(gameRef.current, seed, callbacks, settingsRef.current);
+      
+      const variant = runVariantRef.current;
+      let effectiveSeed = seed;
+      if (variant === 'event' && activeEventRef.current) {
+        effectiveSeed = activeEventRef.current.seed;
+      } else if (variant === 'community' && communitySeedRef.current) {
+        effectiveSeed = communitySeedRef.current;
+      }
+      const effectiveTimerMs = variant === 'event' && activeEventRef.current ? activeEventRef.current.timerMs : 30000;
+      const effectivePuzzleCount = variant === 'event' && activeEventRef.current ? activeEventRef.current.puzzleCount : 30;
+      
+      activeGame = await createGame(gameRef.current, effectiveSeed, callbacks, settingsRef.current, {
+        isEvent: variant === 'event',
+        timerMs: effectiveTimerMs,
+        puzzleCount: effectivePuzzleCount,
+      });
+      
       if (disposed) {
         activeGame.destroy(true);
         activeGame = null;
@@ -375,12 +450,16 @@ export const App = () => {
   };
 
   const openReplay = useCallback(
-    async (replayUsername: string) => {
-      if (!dailyDate) return;
+    async (replayUsername: string, replayDate = dailyDate, replayVariant: 'daily' | 'event' = 'daily') => {
+      if (!replayDate) return;
       setReplayLoading(true);
       setReplayError(null);
       try {
-        const res = await fetch(`/api/replay/${encodeURIComponent(replayUsername)}?date=${encodeURIComponent(dailyDate)}`);
+        const replayUrl =
+          replayVariant === 'event'
+            ? `/api/event/replay/${encodeURIComponent(replayUsername)}?eventId=${encodeURIComponent(replayDate)}`
+            : `/api/replay/${encodeURIComponent(replayUsername)}?date=${encodeURIComponent(replayDate)}`;
+        const res = await fetch(replayUrl);
         if (!res.ok) {
           if (res.status === 404) {
              throw new Error('Replay not found or has expired.');
@@ -516,6 +595,20 @@ export const App = () => {
                     >
                       {canStartOfficial ? 'Practice' : 'Start Practice'}
                     </button>
+                    <button
+                      onClick={() => setPageView('community')}
+                      className="action-button action-secondary"
+                    >
+                      Community Layouts
+                    </button>
+                    {activeEvent && (
+                      <button
+                        onClick={() => setPageView('event')}
+                        className="action-button action-secondary"
+                      >
+                        Event: {activeEvent.label}
+                      </button>
+                    )}
                     {officialSubmitted && bootstrap.currentRun?.hasReplay && username && (
                       <button onClick={() => void openReplay(username)} className="action-button action-secondary">
                         Replay
@@ -616,7 +709,67 @@ export const App = () => {
               title="Daily Leaderboard"
               onBack={() => setPageView('home')}
             >
+              <div className="mb-4 flex justify-end px-4">
+                <button
+                  onClick={() => setPageView('archive')}
+                  className="action-button action-secondary px-3 py-1 text-sm"
+                >
+                  Past Archives
+                </button>
+              </div>
               <LeaderboardTable entries={leaderboardEntries} onOpenReplay={openReplay} />
+            </PageSection>
+          )}
+
+          {pageView === 'archive' && (
+            <div className="absolute inset-0 z-50 flex items-center justify-center bg-[rgba(var(--background-rgb),0.9)] p-4 sm:p-6 md:p-12">
+              <div className="relative flex h-full w-full max-w-4xl flex-col rounded-xl bg-[rgb(var(--surface-rgb))] shadow-2xl">
+                <ArchiveView
+                  onBack={() => setPageView('leaderboard')}
+                  onOpenReplay={openReplay}
+                />
+              </div>
+            </div>
+          )}
+
+          {pageView === 'event' && activeEvent && (
+            <PageSection title="Weekly Event" onBack={() => setPageView('home')}>
+              <div className="surface-panel w-full max-w-3xl rounded-[26px] p-6">
+                <h3 className="mb-2 text-xl font-bold">{activeEvent.label}</h3>
+                <p className="mb-4 text-sm opacity-80">
+                  Timer: {activeEvent.timerMs / 1000}s | Puzzles: {activeEvent.puzzleCount}
+                </p>
+                {eventRun ? (
+                  <div className="rounded-[18px] bg-[rgba(var(--ink-rgb),0.05)] p-4 text-center">
+                    <p className="font-bold text-[rgb(var(--primary-rgb))]">Run Completed</p>
+                    <p className="mt-1 text-2xl font-bold">{eventRun.score} pts</p>
+                    <p className="text-sm opacity-60">Rank: {eventRun.rank ?? '-'}</p>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      void handleEventStart();
+                    }}
+                    className="action-button action-primary w-full"
+                  >
+                    Start Event Run
+                  </button>
+                )}
+              </div>
+              
+              <div className="mt-8">
+                <h4 className="mb-4 text-center text-lg font-bold">Event Leaderboard Preview</h4>
+                <LeaderboardTable
+                  entries={eventLeaderboardEntries}
+                  onOpenReplay={(replayUsername) => void openReplay(replayUsername, activeEvent.eventId, 'event')}
+                />
+              </div>
+            </PageSection>
+          )}
+
+          {pageView === 'community' && (
+            <PageSection title="Community Layouts" onBack={() => setPageView('home')}>
+              <CommunityView onStartCommunityRun={handleCommunityStart} />
             </PageSection>
           )}
 

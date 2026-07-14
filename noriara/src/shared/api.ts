@@ -1,4 +1,4 @@
-import type { PuzzleLayout } from './puzzle';
+import type { PuzzleLayout, PuzzleShape } from './puzzle';
 
 export type InitResponse = {
   type: 'init';
@@ -25,7 +25,7 @@ export type HealthResponse = {
 };
 
 export type RunMode = 'official' | 'practice';
-export type RunVariant = 'daily';
+export type RunVariant = 'daily' | 'event' | 'community' | 'practiceSandbox';
 export type FailureReason = 'hazard' | 'escape';
 
 export type GesturePointSample = {
@@ -64,6 +64,8 @@ export type RunClientSummary = {
 };
 
 export type RunTelemetry = {
+  generatorVersion: number;
+  mechanics: string[];
   attempts: GestureAttempt[];
   solveEvents: SolveEvent[];
   failureEvents: FailureEvent[];
@@ -166,3 +168,119 @@ export type StatsResponse = {
   status: 'ok';
   playerStats: PlayerStats | null;
 };
+
+export type ArchivedDailySummary = {
+  date: string;
+  seed: string;
+  generatorVersion: number;
+  winnerUsername: string | null;
+  winnerScore: number;
+  winnerReplayAvailable: boolean;
+  totalRuns: number;
+};
+
+export type ArchiveListResponse = {
+  status: 'ok';
+  dates: string[];
+};
+
+export type ArchiveDateResponse = {
+  status: 'ok';
+  date: string;
+  summary: ArchivedDailySummary | null;
+  leaderboard: LeaderboardEntry[];
+};
+
+export type LiveOpsConfig = {
+  disabledDates: string[];
+  overriddenSeeds: Record<string, string>;
+  featuredLayoutIds: string[];
+  seasonId: string | null;
+  activeEventId: string | null;
+};
+
+export type EventConfig = {
+  eventId: string;
+  label: string;
+  startDate: string;
+  endDate: string;
+  seed: string;
+  timerMs: number;
+  puzzleCount: number;
+  allowedMechanics: string[];
+};
+
+export type SeasonConfig = {
+  seasonId: string;
+  label: string;
+  startDate: string;
+  endDate: string;
+  allowedMechanics: Record<RunVariant, string[]>;
+  theme: Record<string, string>;
+};
+
+export type EventCurrentResponse = {
+  status: 'ok';
+  activeEvent: EventConfig | null;
+  currentRun: SubmittedRunSummary | null;
+  leaderboardPreview: LeaderboardEntry[];
+};
+
+export type CommunityLayoutStatus = 'submitted' | 'rejected' | 'approved' | 'featured' | 'retired';
+
+export type CommunityLayoutDiagnostics = {
+  issues: string[];
+  previewTargetCount: number;
+  previewHazardCount: number;
+  previewArchetype: string | null;
+  generatorVersion: number;
+};
+
+export type CommunityLayout = {
+  layoutId: string;
+  authorUsername: string;
+  title: string;
+  note: string;
+  seed: string;
+  mechanics: string[];
+  targets: PuzzleShape[];
+  hazards: PuzzleShape[];
+  generatorVersion: number;
+  upvotes: number;
+  submittedAt: string;
+  updatedAt: string;
+  status: CommunityLayoutStatus;
+  rejectionReason: string | null;
+  validatorDiagnostics: CommunityLayoutDiagnostics;
+  featuredAt: string | null;
+  retiredAt: string | null;
+  isFeatured: boolean;
+};
+
+export type CommunityListResponse = {
+  status: 'ok';
+  layouts: CommunityLayout[];
+};
+
+export type CommunitySubmitRequest = {
+  title: string;
+  note: string;
+  seed: string;
+  mechanics: string[];
+};
+
+export type CommunitySubmitResponse = {
+  status: 'ok';
+  layout: CommunityLayout;
+};
+
+export type CommunityMineResponse = {
+  status: 'ok';
+  layouts: CommunityLayout[];
+};
+
+export type AdminCommunityListResponse = {
+  status: 'ok';
+  layouts: CommunityLayout[];
+};
+

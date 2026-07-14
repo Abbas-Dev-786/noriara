@@ -182,11 +182,7 @@ export const Splash = () => {
 
       <div className="motion-rise relative z-10 mx-auto w-full max-w-xl">
         <section className="surface-panel-strong rounded-[30px] px-6 py-8 text-center sm:px-8 sm:py-10">
-          <div className="mx-auto flex h-[4.5rem] w-[4.5rem] items-center justify-center rounded-full border soft-divider bg-white/40 p-3 shadow-[0_4px_16px_rgba(160,79,55,0.1)] sm:h-20 sm:w-20">
-            <img className="object-contain" src="/snoo.png" alt="Snoo" />
-          </div>
 
-          <p className="label-kicker mt-6">Daily Line</p>
           <h1 className="display-title brush-stroke mt-4 text-4xl sm:text-5xl">Noriara</h1>
           <p className="body-copy mx-auto mt-4 max-w-md text-sm sm:text-base">
             One stroke. Thirty seconds. The same board.

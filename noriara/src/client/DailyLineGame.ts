@@ -87,6 +87,9 @@ function createDailyLineScene(Phaser: PhaserModule) {
   private callbacks!: GameCallbacks;
   private seed!: string;
   private settings: GameSettings = DEFAULT_GAME_SETTINGS;
+  private isEvent = false;
+  private puzzleCount = 30;
+  private initialTimerMs = 30000;
 
   private puzzles: PuzzleLayout[] = [];
   private activePuzzleIndex = 0;
@@ -132,15 +135,19 @@ function createDailyLineScene(Phaser: PhaserModule) {
     super('DailyLineScene');
   }
 
-  init(data: { seed: string; callbacks: GameCallbacks; settings?: GameSettings }) {
+  init(data: { seed: string; callbacks: GameCallbacks; settings: GameSettings; isEvent?: boolean; timerMs?: number; puzzleCount?: number }) {
     this.seed = data.seed;
+    this.isEvent = data.isEvent ?? false;
+    this.puzzleCount = data.puzzleCount ?? 30;
+    this.puzzles = generatePuzzlesForSeed(this.seed, this.puzzleCount, undefined, this.isEvent);
     this.callbacks = data.callbacks;
-    this.settings = data.settings ?? DEFAULT_GAME_SETTINGS;
+    this.settings = data.settings;
+    this.initialTimerMs = data.timerMs ?? 30000;
+    this.timeRemainingMs = this.initialTimerMs;
   }
 
   create() {
     this.graphics = this.add.graphics();
-    this.puzzles = generatePuzzlesForSeed(this.seed);
 
     this.input.on('pointerdown', this.onPointerDown, this);
     this.input.on('pointermove', this.onPointerMove, this);
@@ -201,7 +208,7 @@ function createDailyLineScene(Phaser: PhaserModule) {
     this.combo = 0;
     this.maxCombo = 0;
     this.puzzlesSolved = 0;
-    this.timeRemainingMs = 30000;
+    this.timeRemainingMs = this.initialTimerMs;
     this.runStartTime = this.time.now;
     this.attempts = [];
     this.solveEvents = [];
@@ -757,6 +764,8 @@ function createDailyLineScene(Phaser: PhaserModule) {
       puzzlesSolved: this.puzzlesSolved,
       maxCombo: this.maxCombo,
     }, {
+      generatorVersion: this.puzzles[0]?.meta?.generatorVersion ?? 2,
+      mechanics: this.puzzles[0]?.meta?.mechanics ?? ['core'],
       attempts: [...this.attempts],
       solveEvents: [...this.solveEvents],
       failureEvents: [...this.failureEvents],
@@ -851,7 +860,8 @@ export async function createGame(
   parent: HTMLElement,
   seed: string,
   callbacks: GameCallbacks,
-  settings: GameSettings
+  settings: GameSettings,
+  options?: { isEvent?: boolean; timerMs?: number; puzzleCount?: number }
 ): Promise<Phaser.Game> {
   const { default: Phaser } = await import('phaser');
   const DailyLineScene = createDailyLineScene(Phaser);
@@ -868,7 +878,14 @@ export async function createGame(
   };
 
   const game = new Phaser.Game(config);
-  game.scene.add('DailyLineScene', DailyLineScene, true, { seed, callbacks, settings });
+  game.scene.add('DailyLineScene', DailyLineScene, true, { 
+    seed, 
+    callbacks, 
+    settings, 
+    isEvent: options?.isEvent, 
+    timerMs: options?.timerMs,
+    puzzleCount: options?.puzzleCount,
+  });
 
   return game;
 }

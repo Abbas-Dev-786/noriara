@@ -15,6 +15,7 @@ function testDailyReplayStoresVariant() {
     '2026-07-09',
     'seed-1',
     'daily',
+    30,
     100,
     1,
     2,
@@ -33,19 +34,22 @@ function testRejectsNonDailyReplayVariant() {
     '2026-07-09',
     'seed-1',
     'daily',
+    30,
     100,
     1,
     2,
     '2026-07-09T00:00:00.000Z',
     emptyTelemetry()
   );
-  (replay as unknown as { runVariant: string }).runVariant = 'event';
+  (replay as unknown as { runVariant: string }).runVariant = 'practiceSandbox';
 
   assert(!validateReplay(replay), 'expected non-daily replay variant to be rejected');
 }
 
 function emptyTelemetry(): RunTelemetry {
   return {
+    generatorVersion: 2,
+    mechanics: ['core'],
     attempts: [],
     solveEvents: [],
     failureEvents: [],

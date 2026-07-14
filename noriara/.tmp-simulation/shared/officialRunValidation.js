@@ -22,6 +22,9 @@ export function validateOfficialRunPayload(payload) {
     if (!payload.runId || !payload.date || !payload.seed) {
         return { accepted: false, reason: 'Missing submission identifiers.' };
     }
+    if (payload.runVariant !== 'daily' && payload.runVariant !== 'event') {
+        return { accepted: false, reason: 'Unsupported run variant.' };
+    }
     if (summary.totalRunMs < 0 || summary.totalRunMs > MAX_OFFICIAL_RUN_DURATION_MS) {
         return { accepted: false, reason: 'Run duration is not plausible.' };
     }
@@ -62,8 +65,12 @@ export function validateOfficialRunPayload(payload) {
     const puzzles = generatePuzzlesForSeed(payload.seed);
     for (const puzzle of puzzles) {
         const mechanics = puzzle.meta?.mechanics ?? ['core'];
-        if (mechanics.some((mechanic) => mechanic !== 'core')) {
-            return { accepted: false, reason: 'Submission references a disabled puzzle mechanic.' };
+        const allowedMechanics = payload.runVariant === 'daily' || payload.runVariant === 'event' ? ['core'] : ['core'];
+        if (mechanics.some((mechanic) => !allowedMechanics.includes(mechanic))) {
+            return { accepted: false, reason: 'Submission references a disabled puzzle mechanic for this variant.' };
+        }
+        if (telemetry.mechanics && telemetry.mechanics.some((m) => !allowedMechanics.includes(m))) {
+            return { accepted: false, reason: 'Telemetry references a disabled puzzle mechanic for this variant.' };
         }
     }
     let currentPuzzleIndex = 0;
