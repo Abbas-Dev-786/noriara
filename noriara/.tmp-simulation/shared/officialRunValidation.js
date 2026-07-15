@@ -16,16 +16,20 @@ export const MAX_OFFICIAL_RUN_DURATION_MS = 31_000;
 export const MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS = 5_000;
 export const MAX_OFFICIAL_ATTEMPTS = 120;
 export const MAX_OFFICIAL_POINTS = 2_500;
-export function validateOfficialRunPayload(payload) {
+export function validateOfficialRunPayload(payload, options = {}) {
     const { telemetry } = payload;
     const { attempts, solveEvents, failureEvents, summary } = telemetry;
+    const maxDurationMs = options.maxDurationMs ?? MAX_OFFICIAL_RUN_DURATION_MS;
+    const puzzleCount = options.puzzleCount ?? 30;
+    const isEvent = options.isEvent ?? payload.runVariant === 'event';
+    const allowedMechanics = options.allowedMechanics ?? ['core'];
     if (!payload.runId || !payload.date || !payload.seed) {
         return { accepted: false, reason: 'Missing submission identifiers.' };
     }
     if (payload.runVariant !== 'daily' && payload.runVariant !== 'event') {
         return { accepted: false, reason: 'Unsupported run variant.' };
     }
-    if (summary.totalRunMs < 0 || summary.totalRunMs > MAX_OFFICIAL_RUN_DURATION_MS) {
+    if (summary.totalRunMs < 0 || summary.totalRunMs > maxDurationMs) {
         return { accepted: false, reason: 'Run duration is not plausible.' };
     }
     const telemetryLimitError = getOfficialRunTelemetryLimitError(telemetry);
@@ -35,15 +39,18 @@ export function validateOfficialRunPayload(payload) {
     if (solveEvents.length !== summary.puzzlesSolved) {
         return { accepted: false, reason: 'Puzzle count does not match solve events.' };
     }
+    if (summary.puzzlesSolved > puzzleCount) {
+        return { accepted: false, reason: 'Puzzle count exceeds the configured run limit.' };
+    }
     for (let i = 0; i < solveEvents.length; i++) {
         const solve = solveEvents[i];
         if (solve.puzzleIndex !== i) {
             return { accepted: false, reason: 'Solve order is invalid.' };
         }
-        if (solve.solveTimeMs <= 0 || solve.solveTimeMs > 30_000) {
+        if (solve.solveTimeMs <= 0 || solve.solveTimeMs > maxDurationMs) {
             return { accepted: false, reason: 'Solve time is invalid.' };
         }
-        if (solve.timestampMs < solve.solveTimeMs || solve.timestampMs > MAX_OFFICIAL_RUN_DURATION_MS) {
+        if (solve.timestampMs < solve.solveTimeMs || solve.timestampMs > maxDurationMs) {
             return { accepted: false, reason: 'Solve timestamp is invalid.' };
         }
         if (i > 0 && solve.timestampMs <= solveEvents[i - 1].timestampMs) {
@@ -52,7 +59,7 @@ export function validateOfficialRunPayload(payload) {
     }
     for (let i = 0; i < failureEvents.length; i++) {
         const failure = failureEvents[i];
-        if (failure.timestampMs < 0 || failure.timestampMs > MAX_OFFICIAL_RUN_DURATION_MS) {
+        if (failure.timestampMs < 0 || failure.timestampMs > maxDurationMs) {
             return { accepted: false, reason: 'Failure timestamp is invalid.' };
         }
         if (i > 0 && failure.timestampMs <= failureEvents[i - 1].timestampMs) {
@@ -62,10 +69,9 @@ export function validateOfficialRunPayload(payload) {
     if (attempts.length < solveEvents.length) {
         return { accepted: false, reason: 'Attempt telemetry is incomplete.' };
     }
-    const puzzles = generatePuzzlesForSeed(payload.seed);
+    const puzzles = generatePuzzlesForSeed(payload.seed, puzzleCount, undefined, isEvent);
     for (const puzzle of puzzles) {
         const mechanics = puzzle.meta?.mechanics ?? ['core'];
-        const allowedMechanics = payload.runVariant === 'daily' || payload.runVariant === 'event' ? ['core'] : ['core'];
         if (mechanics.some((mechanic) => !allowedMechanics.includes(mechanic))) {
             return { accepted: false, reason: 'Submission references a disabled puzzle mechanic for this variant.' };
         }
@@ -88,7 +94,7 @@ export function validateOfficialRunPayload(payload) {
         if (attempt.puzzleIndex !== currentPuzzleIndex) {
             return { accepted: false, reason: 'Attempt puzzle index is invalid.' };
         }
-        if (!isAttemptTelemetryValid(attempt)) {
+        if (!isAttemptTelemetryValid(attempt, maxDurationMs)) {
             return { accepted: false, reason: 'Attempt telemetry is invalid.' };
         }
         if (attempt.startedAtMs < currentPuzzleStartMs) {
@@ -149,14 +155,14 @@ export function validateOfficialRunPayload(payload) {
         lastSolveTimestampMs: previousSolveTimestamp,
     };
 }
-function isAttemptTelemetryValid(attempt) {
+function isAttemptTelemetryValid(attempt, maxDurationMs) {
     if (attempt.pointCount < MIN_GESTURE_POINTS || attempt.points.length !== attempt.pointCount) {
         return false;
     }
     if (attempt.pathLength < MIN_GESTURE_LENGTH) {
         return false;
     }
-    if (attempt.releaseTimestampMs > MAX_OFFICIAL_RUN_DURATION_MS || attempt.startedAtMs < 0) {
+    if (attempt.releaseTimestampMs > maxDurationMs || attempt.startedAtMs < 0) {
         return false;
     }
     if (attempt.releaseTimestampMs <= attempt.startedAtMs) {
@@ -194,9 +200,9 @@ export function getOfficialRunTelemetryLimitError(telemetry) {
     }
     return null;
 }
-export function isOfficialRunSubmissionWindowValid(startedAtEpochMs, nowEpochMs) {
+export function isOfficialRunSubmissionWindowValid(startedAtEpochMs, nowEpochMs, maxRunDurationMs = MAX_OFFICIAL_RUN_DURATION_MS) {
     const elapsedMs = nowEpochMs - startedAtEpochMs;
-    return elapsedMs >= 0 && elapsedMs <= MAX_OFFICIAL_RUN_DURATION_MS + MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS;
+    return elapsedMs >= 0 && elapsedMs <= maxRunDurationMs + MAX_OFFICIAL_RUN_SUBMISSION_GRACE_MS;
 }
 function consumeAttemptEvent(attempt, solveEvents, failureEvents, solveIndex, failureIndex) {
     if (attempt.outcome === 'success') {

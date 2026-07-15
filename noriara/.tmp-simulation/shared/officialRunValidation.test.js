@@ -8,6 +8,8 @@ const seed = generateSeed(date);
 run();
 function run() {
     testAcceptsValidSolve();
+    testAcceptsEmptyEventRun();
+    testRejectsDailyGeometryForEventRun();
     testRejectsStaticBodySolve();
     testRejectsStaticBodyHazardFailureClaim();
     testRejectsSpoofedScore();
@@ -27,6 +29,27 @@ function testAcceptsValidSolve() {
         assert(result.puzzlesSolved === 1, 'expected one solved puzzle');
         assert(result.maxCombo === 1, 'expected max combo of one');
     }
+}
+function testAcceptsEmptyEventRun() {
+    const payload = createEmptyEventPayload();
+    const result = validateOfficialRunPayload(payload, {
+        maxDurationMs: 45_000,
+        puzzleCount: 12,
+        isEvent: true,
+        allowedMechanics: ['core'],
+    });
+    assert(result.accepted === true, 'expected empty event payload to be accepted');
+}
+function testRejectsDailyGeometryForEventRun() {
+    const payload = createValidPayload();
+    payload.runVariant = 'event';
+    const result = validateOfficialRunPayload(payload, {
+        maxDurationMs: 45_000,
+        puzzleCount: 12,
+        isEvent: true,
+        allowedMechanics: ['core'],
+    });
+    assert(result.accepted === false, 'expected daily geometry to fail event validation');
 }
 function testRejectsSpoofedScore() {
     const payload = createValidPayload();
@@ -204,6 +227,27 @@ function createStaticBodyExploitPayload() {
                 puzzlesSolved: 1,
                 maxCombo: 1,
                 totalRunMs: 130,
+            },
+        },
+    };
+}
+function createEmptyEventPayload() {
+    return {
+        runId: 'event-run-empty',
+        date: 'event-1',
+        seed: 'event-seed-2026-07-14',
+        runVariant: 'event',
+        telemetry: {
+            generatorVersion: 2,
+            mechanics: ['core'],
+            attempts: [],
+            solveEvents: [],
+            failureEvents: [],
+            summary: {
+                score: 0,
+                puzzlesSolved: 0,
+                maxCombo: 0,
+                totalRunMs: 45_000,
             },
         },
     };

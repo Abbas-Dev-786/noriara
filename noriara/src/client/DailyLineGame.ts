@@ -130,6 +130,8 @@ function createDailyLineScene(Phaser: PhaserModule) {
   private graphics!: Phaser.GameObjects.Graphics;
   private activeCountdownText: Phaser.GameObjects.Text | null = null;
   private flashAlpha = 0;
+  private pageHidden = typeof document !== 'undefined' && document.hidden;
+  private activeAudioContexts = new Set<AudioContext>();
 
   constructor() {
     super('DailyLineScene');
@@ -149,6 +151,13 @@ function createDailyLineScene(Phaser: PhaserModule) {
   create() {
     this.graphics = this.add.graphics();
 
+    if (typeof document !== 'undefined') {
+      this.pageHidden = document.hidden;
+      document.addEventListener('visibilitychange', this.onVisibilityChange);
+    }
+    this.events.once('shutdown', this.disposeAudio, this);
+    this.events.once('destroy', this.disposeAudio, this);
+
     this.input.on('pointerdown', this.onPointerDown, this);
     this.input.on('pointermove', this.onPointerMove, this);
     this.input.on('pointerup', this.onPointerUp, this);
@@ -162,6 +171,7 @@ function createDailyLineScene(Phaser: PhaserModule) {
 
   public updateSettings(settings: GameSettings) {
     this.settings = settings;
+    if (!settings.soundEnabled) this.closeActiveAudioContexts();
     this.renderScene();
   }
 
@@ -840,12 +850,13 @@ function createDailyLineScene(Phaser: PhaserModule) {
   }
 
   private playTone(frequency: number, durationSeconds: number, volume: number, delayMs: number = 0) {
-    if (!this.settings.soundEnabled) return;
+    if (!this.settings.soundEnabled || this.pageHidden) return;
     const AudioContextCtor = globalThis.AudioContext;
     if (!AudioContextCtor) return;
 
     try {
       const audioContext = new AudioContextCtor();
+      this.activeAudioContexts.add(audioContext);
       const now = audioContext.currentTime + delayMs / 1000;
       const oscillator = audioContext.createOscillator();
       const gainNode = audioContext.createGain();
@@ -861,11 +872,37 @@ function createDailyLineScene(Phaser: PhaserModule) {
       oscillator.start(now);
       oscillator.stop(now + durationSeconds + 0.02);
       oscillator.onended = () => {
-        void audioContext.close();
+        this.activeAudioContexts.delete(audioContext);
+        if (audioContext.state !== 'closed') {
+          void audioContext.close().catch(() => undefined);
+        }
       };
     } catch {
       // Best-effort only.
     }
+  }
+
+  private onVisibilityChange = () => {
+    this.pageHidden = document.hidden;
+    if (!this.pageHidden) return;
+
+    this.closeActiveAudioContexts();
+  };
+
+  private disposeAudio() {
+    if (typeof document !== 'undefined') {
+      document.removeEventListener('visibilitychange', this.onVisibilityChange);
+    }
+    this.closeActiveAudioContexts();
+  }
+
+  private closeActiveAudioContexts() {
+    for (const audioContext of this.activeAudioContexts) {
+      if (audioContext.state !== 'closed') {
+        void audioContext.close().catch(() => undefined);
+      }
+    }
+    this.activeAudioContexts.clear();
   }
 
   private vibrate(durationMs: number) {

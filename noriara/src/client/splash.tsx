@@ -295,11 +295,9 @@ const TARGETS_CONFIG = [
 ];
 
 const TargetLayer = () => {
-  const targets = useRef(TARGETS_CONFIG).current;
-
   return (
     <div className="pointer-events-none absolute inset-0 overflow-hidden z-0">
-      {targets.map((t) => (
+      {TARGETS_CONFIG.map((t) => (
         <div
           key={t.id}
           className="absolute rounded-full backdrop-blur-sm"

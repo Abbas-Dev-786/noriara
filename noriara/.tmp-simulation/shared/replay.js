@@ -9,12 +9,13 @@ const MIN_GESTURE_LENGTH = 40;
 const MAX_REPLAY_POINTS = 2_500;
 const MAX_REPLAY_ATTEMPTS = 120;
 const MAX_SIMULATION_STEPS = 3_500;
-export function createReplayData(username, date, seed, runVariant, score, puzzlesSolved, rank, acceptedAt, telemetry) {
+export function createReplayData(username, date, seed, runVariant, puzzleCount, score, puzzlesSolved, rank, acceptedAt, telemetry) {
     return {
         version: 1,
         date,
         seed,
         runVariant,
+        puzzleCount,
         username,
         score,
         puzzlesSolved,
@@ -30,6 +31,8 @@ export function validateReplay(replay) {
         return false;
     if (replay.runVariant !== 'daily' && replay.runVariant !== 'event')
         return false;
+    if (!Number.isInteger(replay.puzzleCount) || replay.puzzleCount <= 0 || replay.puzzleCount > 120)
+        return false;
     if (replay.telemetry.attempts.length > MAX_REPLAY_ATTEMPTS)
         return false;
     let pointCount = 0;
@@ -39,7 +42,7 @@ export function validateReplay(replay) {
     return pointCount <= MAX_REPLAY_POINTS;
 }
 export function buildReplayTimeline(replay) {
-    const puzzles = generatePuzzlesForSeed(replay.seed);
+    const puzzles = generatePuzzlesForSeed(replay.seed, replay.puzzleCount, undefined, replay.runVariant === 'event');
     const segments = replay.telemetry.attempts
         .map((attempt) => buildReplaySegment(attempt, puzzles[attempt.puzzleIndex]))
         .filter((segment) => segment !== null);

@@ -1,13 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
 import { Hono } from 'hono';
-import { context, redis, reddit } from '@devvit/web/server';
+import { redis, reddit } from '@devvit/web/server';
 import type {
   BootstrapResponse,
-  DecrementResponse,
   HealthResponse,
-  IncrementResponse,
-  InitResponse,
   LeaderboardEntry,
   LeaderboardResponse,
   PlayerStats,
@@ -26,11 +23,6 @@ import {
 } from '../../shared/officialRunValidation';
 import { buildPersonalBestSummary, getEmptyPlayerStats, updatePlayerStats } from '../../shared/playerStats';
 import { createReplayData, type ReplayData, type ReplayResponse, validateReplay } from '../../shared/replay';
-
-type ErrorResponse = {
-  status: 'error';
-  message: string;
-};
 
 const OFFICIAL_RUN_TTL_SECONDS = 60 * 60 * 24 * 2;
 const RUN_META_TTL_SECONDS = 60 * 60 * 24 * 30;
@@ -60,7 +52,8 @@ api.get('/health', (c) => {
 });
 
 api.get('/bootstrap', async (c) => {
-  const { date, seed } = await getCurrentDailySeed();
+  const daily = await getCurrentDailyState();
+  const { date, seed } = daily;
   const username = await reddit.getCurrentUsername();
   const loggedIn = Boolean(username);
 
@@ -74,12 +67,14 @@ api.get('/bootstrap', async (c) => {
     status: 'ok',
     date,
     seed,
+    dailyAvailable: daily.available,
+    unavailableReason: daily.reason,
     runVariant: DAILY_RUN_VARIANT,
-    puzzles: generatePuzzlesForSeed(seed),
+    puzzles: daily.available ? generatePuzzlesForSeed(seed) : [],
     username: username ?? null,
     loggedIn,
     hasSubmittedToday: currentRun !== null,
-    canStartOfficial: loggedIn && currentRun === null,
+    canStartOfficial: daily.available && loggedIn && currentRun === null,
     currentRun,
     playerStats,
     leaderboardPreview,
@@ -87,7 +82,22 @@ api.get('/bootstrap', async (c) => {
 });
 
 api.post('/run/start', async (c) => {
-  const { date, seed } = await getCurrentDailySeed();
+  const daily = await getCurrentDailyState();
+  const { date, seed } = daily;
+
+  if (!daily.available) {
+    return c.json<StartRunResponse>({
+      status: 'ok',
+      mode: 'practice',
+      runVariant: DAILY_RUN_VARIANT,
+      date,
+      seed,
+      runId: null,
+      officialRunAllowed: false,
+      reason: daily.reason,
+    });
+  }
+
   const username = await reddit.getCurrentUsername();
 
   if (!username) {
@@ -149,7 +159,24 @@ api.post('/run/start', async (c) => {
 api.post('/run/submit', async (c) => {
   const username = await reddit.getCurrentUsername();
   const payload = await c.req.json<SubmitRunRequest>();
-  const { date, seed } = await getCurrentDailySeed();
+  const daily = await getCurrentDailyState();
+  const { date, seed } = daily;
+
+  if (!daily.available) {
+    return c.json<SubmitRunResponse>({
+      status: 'ok',
+      accepted: false,
+      mode: 'official',
+      finalScore: 0,
+      puzzlesSolved: 0,
+      rank: null,
+      reason: daily.reason,
+      replayAvailable: false,
+      playerStats: username ? await getPlayerStats(username) : null,
+      personalBest: null,
+      leaderboardPreview: await getLeaderboardEntries(date, username ?? null, PREVIEW_LIMIT),
+    });
+  }
 
   if (!username) {
     return c.json<SubmitRunResponse>({
@@ -415,7 +442,7 @@ api.post('/run/submit', async (c) => {
 });
 
 api.get('/leaderboard', async (c) => {
-  const { date: currentDate } = await getCurrentDailySeed();
+  const { date: currentDate } = await getCurrentDailyState();
   const date = c.req.query('date') ?? currentDate;
   const username = await reddit.getCurrentUsername();
   const [entries, currentUserRank] = await Promise.all([
@@ -443,7 +470,7 @@ api.get('/stats', async (c) => {
 
 api.get('/replay/:username', async (c) => {
   const requestedUsername = c.req.param('username');
-  const { date: currentDate } = await getCurrentDailySeed();
+  const { date: currentDate } = await getCurrentDailyState();
   const date = c.req.query('date') ?? currentDate;
   const viewerUsername = await reddit.getCurrentUsername();
   const replay = await getReplay(date, requestedUsername, viewerUsername ?? null);
@@ -451,68 +478,6 @@ api.get('/replay/:username', async (c) => {
   return c.json<ReplayResponse>({
     status: 'ok',
     replay,
-  });
-});
-
-api.get('/init', async (c) => {
-  const { postId } = context;
-
-  if (!postId) {
-    console.error('API Init Error: postId not found in devvit context');
-    return c.json<ErrorResponse>(
-      {
-        status: 'error',
-        message: 'postId is required but missing from context',
-      },
-      400
-    );
-  }
-
-  try {
-    const [count, username] = await Promise.all([
-      redis.get(getCountKey(postId)),
-      reddit.getCurrentUsername(),
-    ]);
-
-    return c.json<InitResponse>({
-      type: 'init',
-      postId,
-      count: count ? parseInt(count, 10) : 0,
-      username: username ?? 'anonymous',
-    });
-  } catch (error) {
-    console.error(`API Init Error for post ${postId}:`, error);
-    const errorMessage =
-      error instanceof Error ? `Initialization failed: ${error.message}` : 'Unknown error during initialization';
-    return c.json<ErrorResponse>({ status: 'error', message: errorMessage }, 400);
-  }
-});
-
-api.post('/increment', async (c) => {
-  const { postId } = context;
-  if (!postId) {
-    return c.json<ErrorResponse>({ status: 'error', message: 'postId is required' }, 400);
-  }
-
-  const count = await redis.incrBy(getCountKey(postId), 1);
-  return c.json<IncrementResponse>({
-    count,
-    postId,
-    type: 'increment',
-  });
-});
-
-api.post('/decrement', async (c) => {
-  const { postId } = context;
-  if (!postId) {
-    return c.json<ErrorResponse>({ status: 'error', message: 'postId is required' }, 400);
-  }
-
-  const count = await redis.incrBy(getCountKey(postId), -1);
-  return c.json<DecrementResponse>({
-    count,
-    postId,
-    type: 'decrement',
   });
 });
 
@@ -528,17 +493,22 @@ async function getLiveOpsConfig(): Promise<LiveOpsConfig | null> {
   }
 }
 
-async function getCurrentDailySeed() {
+async function getCurrentDailyState() {
   const date = new Date().toISOString().slice(0, 10);
   const liveOps = await getLiveOpsConfig();
-  
+
   if (liveOps?.disabledDates?.includes(date)) {
-    return { date, seed: 'DISABLED' }; // Or throw error
+    return {
+      available: false,
+      date,
+      seed: '',
+      reason: 'The daily challenge is unavailable today.',
+    };
   }
-  
+
   const seed = liveOps?.overriddenSeeds?.[date] ?? generateSeed(date);
-  
-  return { date, seed };
+
+  return { available: true, date, seed, reason: null };
 }
 
 function getLeaderboardKey(date: string) {
@@ -567,10 +537,6 @@ function getPublicReplayKey(date: string, username: string) {
 
 function getPublicReplaySetKey(date: string) {
   return `daily:${date}:replay:public:set`;
-}
-
-function getCountKey(postId: string) {
-  return `post:${postId}:count`;
 }
 
 function makeRankScore(

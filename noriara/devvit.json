@@ -5,7 +5,6 @@
     "dir": "dist/client",
     "entrypoints": {
       "default": {
-        "inline": true,
         "entry": "splash.html"
       },
       "game": {
@@ -20,7 +19,8 @@
   "permissions": {
     "redis": true,
     "reddit": {
-      "enable": true
+      "enable": true,
+      "scope": "moderator"
     }
   },
   "menu": {
@@ -33,19 +33,34 @@
         "endpoint": "/internal/menu/post-create"
       },
       {
-        "label": "Example form",
-        "description": "Show a simple form",
+        "label": "Configure Noriara event",
+        "description": "Create, update, and activate an event",
         "location": "subreddit",
         "forUserType": "moderator",
-        "endpoint": "/internal/menu/example-form"
+        "endpoint": "/internal/menu/event-configure"
+      },
+      {
+        "label": "Deactivate Noriara event",
+        "description": "Disable the currently active event",
+        "location": "subreddit",
+        "forUserType": "moderator",
+        "endpoint": "/internal/menu/event-deactivate"
       }
     ]
   },
   "forms": {
-    "exampleForm": "/internal/form/example-submit"
+    "eventForm": "/internal/form/event-submit"
   },
   "triggers": {
     "onAppInstall": "/internal/triggers/on-app-install"
+  },
+  "scheduler": {
+    "tasks": {
+      "archive-yesterday": {
+        "endpoint": "/internal/scheduler/archive-yesterday",
+        "cron": "5 0 * * *"
+      }
+    }
   },
   "scripts": {
     "dev": "vite build --watch",

@@ -1,19 +1,22 @@
 import { Hono } from 'hono';
-import { redis, reddit } from '@devvit/web/server';
-import type { AdminCommunityListResponse, CommunityLayout, LiveOpsConfig } from '../../shared/api';
-import { generatePuzzlesForSeed } from '../../shared/puzzle';
-import { generateSeed } from '../../shared/seed';
+import type { AdminCommunityListResponse, CommunityLayout } from '../../shared/api';
+import { isValidIsoDate, normalizeEventConfig, type EventConfigInput } from '../../shared/liveOps';
 import { getAllCommunityLayouts, getCommunityLayoutById, writeCommunityLayout } from './community';
+import { archiveDailyLeaderboard, getUtcDateOffset } from '../services/dailyArchive';
+import {
+  activateEvent,
+  deactivateEvent,
+  getWritableLiveOpsConfig,
+  saveAndActivateEvent,
+  saveLiveOpsConfig,
+} from '../services/liveOps';
+import { requireConfigModerator } from '../services/moderatorAuth';
 
 export const admin = new Hono();
 
-const ARCHIVE_INDEX_KEY = 'archive:daily:index';
-const DAILY_LEADERBOARD_LIMIT = 100;
-const ADMIN_USERNAMES_KEY = 'admin:usernames';
-
 admin.get('/community/layouts', async (c) => {
   try {
-    await requireAdmin();
+    await requireConfigModerator();
     const status = c.req.query('status');
     const layouts = await getAllCommunityLayouts();
     return c.json<AdminCommunityListResponse>({
@@ -73,34 +76,12 @@ admin.post('/community/layouts/:id/retire', async (c) => {
 
 admin.post('/archive-yesterday', async (c) => {
   try {
-    await requireAdmin();
-    const date = getUtcDateOffset(-1);
-    const liveOps = await getLiveOpsConfig();
-    const seed = liveOps?.overriddenSeeds?.[date] ?? generateSeed(date);
-    const leaderboard = await getDailyLeaderboardSnapshot(date);
-    const summaryKey = `archive:daily:${date}:summary`;
-    const leaderboardKey = `archive:daily:${date}:leaderboard`;
-    const topEntry = leaderboard[0] ?? null;
-    const generatorVersion = generatePuzzlesForSeed(seed, 1)[0]?.meta?.generatorVersion ?? 2;
-
-    await Promise.all([
-      redis.hSet(summaryKey, {
-        date,
-        seed,
-        generatorVersion: generatorVersion.toString(),
-        winnerUsername: topEntry?.username ?? '',
-        winnerScore: (topEntry?.score ?? 0).toString(),
-        winnerReplayAvailable: String(topEntry?.hasReplay ?? false),
-        totalRuns: (await redis.zCard(getDailyLeaderboardKey(date))).toString(),
-      }),
-      redis.set(leaderboardKey, JSON.stringify(leaderboard)),
-      redis.zAdd(ARCHIVE_INDEX_KEY, { member: date, score: Date.parse(`${date}T00:00:00.000Z`) }),
-    ]);
+    await requireConfigModerator();
+    const result = await archiveDailyLeaderboard(getUtcDateOffset(-1));
 
     return c.json({
       status: 'ok',
-      archivedDate: date,
-      archivedEntries: leaderboard.length,
+      ...result,
     });
   } catch (error) {
     return c.json({ status: 'error', message: (error as Error).message }, 401);
@@ -109,16 +90,16 @@ admin.post('/archive-yesterday', async (c) => {
 
 admin.post('/liveops/disable-date', async (c) => {
   try {
-    await requireAdmin();
+    await requireConfigModerator();
     const { date } = await c.req.json<{ date: string }>();
-    if (!date) throw new Error('Date is required');
+    if (!isValidIsoDate(date)) throw new Error('Date must use YYYY-MM-DD.');
 
     const config = await getWritableLiveOpsConfig();
     if (!config.disabledDates.includes(date)) {
       config.disabledDates.push(date);
     }
 
-    await redis.set('liveops:config', JSON.stringify(config));
+    await saveLiveOpsConfig(config);
     return c.json({ status: 'ok', config });
   } catch (error) {
     return c.json({ status: 'error', message: (error as Error).message }, 401);
@@ -127,17 +108,49 @@ admin.post('/liveops/disable-date', async (c) => {
 
 admin.post('/liveops/override-seed', async (c) => {
   try {
-    await requireAdmin();
+    await requireConfigModerator();
     const { date, seed } = await c.req.json<{ date: string; seed: string }>();
-    if (!date || !seed) throw new Error('Date and seed are required');
+    if (!isValidIsoDate(date) || !seed?.trim()) throw new Error('A valid date and seed are required.');
 
     const config = await getWritableLiveOpsConfig();
-    config.overriddenSeeds[date] = seed;
+    config.overriddenSeeds[date] = seed.trim();
 
-    await redis.set('liveops:config', JSON.stringify(config));
+    await saveLiveOpsConfig(config);
     return c.json({ status: 'ok', config });
   } catch (error) {
     return c.json({ status: 'error', message: (error as Error).message }, 401);
+  }
+});
+
+admin.post('/events', async (c) => {
+  try {
+    await requireConfigModerator();
+    const body = await c.req.json<EventConfigInput & { activate?: unknown }>();
+    const eventConfig = normalizeEventConfig(body);
+    await saveAndActivateEvent(eventConfig, body.activate === true);
+    return c.json({ status: 'ok', eventConfig, active: body.activate === true });
+  } catch (error) {
+    return c.json({ status: 'error', message: (error as Error).message }, 400);
+  }
+});
+
+admin.post('/events/:id/activate', async (c) => {
+  try {
+    await requireConfigModerator();
+    const eventConfig = await activateEvent(c.req.param('id'));
+    return c.json({ status: 'ok', eventConfig, active: true });
+  } catch (error) {
+    return c.json({ status: 'error', message: (error as Error).message }, 400);
+  }
+});
+
+admin.post('/events/deactivate', async (c) => {
+  try {
+    await requireConfigModerator();
+    await deactivateEvent();
+    return c.json({ status: 'ok', active: false });
+  } catch (error) {
+    return c.json({ status: 'error', message: (error as Error).message }, 400);
   }
 });
 
@@ -146,7 +159,7 @@ async function mutateCommunityLayout(
   mutate: (layout: CommunityLayout) => Promise<CommunityLayout> | CommunityLayout
 ) {
   try {
-    await requireAdmin();
+    await requireConfigModerator();
     const layout = await getCommunityLayoutById(layoutId);
     if (!layout) {
       return new Response(JSON.stringify({ status: 'error', message: 'Layout not found.' }), {
@@ -166,110 +179,4 @@ async function mutateCommunityLayout(
       headers: { 'Content-Type': 'application/json' },
     });
   }
-}
-
-async function requireAdmin() {
-  const username = await reddit.getCurrentUsername();
-  if (!username) {
-    throw new Error('Unauthorized');
-  }
-
-  const raw = await redis.get(ADMIN_USERNAMES_KEY);
-  const admins = parseAdminUsernames(raw);
-  if (!admins.includes(username.toLowerCase())) {
-    throw new Error('Admin access required.');
-  }
-
-  return username;
-}
-
-function parseAdminUsernames(raw: string | null | undefined): string[] {
-  if (!raw) return [];
-  try {
-    const parsed = JSON.parse(raw) as string[];
-    return Array.isArray(parsed) ? parsed.map((value) => value.toLowerCase()) : [];
-  } catch {
-    return raw
-      .split(',')
-      .map((value) => value.trim().toLowerCase())
-      .filter(Boolean);
-  }
-}
-
-async function getLiveOpsConfig(): Promise<LiveOpsConfig | null> {
-  const raw = await redis.get('liveops:config');
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as LiveOpsConfig;
-  } catch {
-    return null;
-  }
-}
-
-async function getWritableLiveOpsConfig(): Promise<LiveOpsConfig> {
-  return (
-    (await getLiveOpsConfig()) ?? {
-      disabledDates: [],
-      overriddenSeeds: {},
-      featuredLayoutIds: [],
-      seasonId: null,
-      activeEventId: null,
-    }
-  );
-}
-
-async function getDailyLeaderboardSnapshot(date: string) {
-  const ranked = await redis.zRange(getDailyLeaderboardKey(date), 0, DAILY_LEADERBOARD_LIMIT - 1, {
-    by: 'rank',
-    reverse: true,
-  });
-
-  const entries: Array<{
-    rank: number;
-    username: string;
-    score: number;
-    puzzlesSolved: number;
-    hasReplay: boolean;
-    isCurrentUser: boolean;
-  }> = [];
-
-  for (let index = 0; index < ranked.length; index++) {
-    const username = ranked[index]!.member;
-    const fields = await redis.hGetAll(getDailyRunMetaKey(date, username));
-    const hasReplay =
-      Boolean(await redis.get(getDailyPersonalReplayKey(date, username))) ||
-      Boolean(await redis.get(getDailyPublicReplayKey(date, username)));
-    entries.push({
-      rank: index + 1,
-      username,
-      score: parseInt(fields.score ?? '0', 10),
-      puzzlesSolved: parseInt(fields.puzzlesSolved ?? '0', 10),
-      hasReplay,
-      isCurrentUser: false,
-    });
-  }
-
-  return entries;
-}
-
-function getUtcDateOffset(offsetDays: number) {
-  const date = new Date();
-  date.setUTCDate(date.getUTCDate() + offsetDays);
-  return date.toISOString().slice(0, 10);
-}
-
-function getDailyLeaderboardKey(date: string) {
-  return `daily:${date}:leaderboard`;
-}
-
-function getDailyRunMetaKey(date: string, username: string) {
-  return `daily:${date}:runs:${username}`;
-}
-
-function getDailyPersonalReplayKey(date: string, username: string) {
-  return `daily:${date}:replay:self:${username}`;
-}
-
-function getDailyPublicReplayKey(date: string, username: string) {
-  return `daily:${date}:replay:public:${username}`;
 }

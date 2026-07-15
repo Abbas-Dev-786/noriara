@@ -142,7 +142,7 @@ export const App = () => {
     }
   }, []);
 
-  const fetchBootstrap = useCallback(async () => {
+  const fetchBootstrap = useCallback(async (preserveGameState = false) => {
     try {
       const res = await fetch('/api/bootstrap');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -164,7 +164,9 @@ export const App = () => {
         .catch(console.error);
 
       setPlayerStats(data.playerStats);
-      setGameState('ready');
+      if (!preserveGameState) {
+        setGameState('ready');
+      }
       loadLocalBest(`${LOCAL_BEST_KEY}:${data.date}`);
     } catch (error) {
       console.error('Failed to bootstrap game', error);
@@ -234,10 +236,7 @@ export const App = () => {
     setPageView('home');
     setGameState('playing');
     pendingCountdownRef.current = true;
-    phaserSceneRef.current?.startCountdown();
-    if (phaserSceneRef.current) {
-      pendingCountdownRef.current = false;
-    }
+    setSessionId((current) => current + 1);
   }, []);
 
   const handleOfficialStart = useCallback(async () => {
@@ -250,6 +249,13 @@ export const App = () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
       const data: StartRunResponse = await res.json();
+      if (!data.officialRunAllowed && !data.seed) {
+        setSubmissionState({
+          status: 'rejected',
+          reason: data.reason ?? 'The daily challenge is unavailable.',
+        });
+        return;
+      }
       startLocalRun(data.mode, 'daily', data.runId);
     } catch (error) {
       console.error('Failed to start run', error);
@@ -279,6 +285,7 @@ export const App = () => {
   }, [startLocalRun]);
 
   const handlePracticeStart = useCallback(() => {
+    if (bootstrapRef.current?.dailyAvailable === false) return;
     startLocalRun('practice', 'daily', null);
   }, [startLocalRun]);
 
@@ -327,7 +334,7 @@ export const App = () => {
             puzzlesSolved: data.puzzlesSolved,
             maxCombo: result.maxCombo,
           });
-          await fetchBootstrap();
+          await fetchBootstrap(true);
         } else {
           setSubmissionState({
             status: 'rejected',
@@ -348,7 +355,16 @@ export const App = () => {
   );
 
   useEffect(() => {
-    if (!gameRef.current || !seed) return;
+    if (!gameRef.current) return;
+
+    const variant = runVariantRef.current;
+    const sceneSeed =
+      variant === 'event' && activeEventRef.current
+        ? activeEventRef.current.seed
+        : variant === 'community' && communitySeedRef.current
+          ? communitySeedRef.current
+          : seed;
+    if (!sceneSeed) return;
 
     const callbacks: GameCallbacks = {
       onScoreChange: (nextScore, nextCombo) => {
@@ -405,17 +421,10 @@ export const App = () => {
         return;
       }
       
-      const variant = runVariantRef.current;
-      let effectiveSeed = seed;
-      if (variant === 'event' && activeEventRef.current) {
-        effectiveSeed = activeEventRef.current.seed;
-      } else if (variant === 'community' && communitySeedRef.current) {
-        effectiveSeed = communitySeedRef.current;
-      }
       const effectiveTimerMs = variant === 'event' && activeEventRef.current ? activeEventRef.current.timerMs : 30000;
       const effectivePuzzleCount = variant === 'event' && activeEventRef.current ? activeEventRef.current.puzzleCount : 30;
       
-      activeGame = await createGame(gameRef.current, effectiveSeed, callbacks, settingsRef.current, {
+      activeGame = await createGame(gameRef.current, sceneSeed, callbacks, settingsRef.current, {
         isEvent: variant === 'event',
         timerMs: effectiveTimerMs,
         puzzleCount: effectivePuzzleCount,
@@ -554,7 +563,51 @@ export const App = () => {
             }`}
           />
 
-          {isHomeView && gameState === 'ready' && bootstrap && (
+          {isHomeView && gameState === 'ready' && bootstrap && !bootstrap.dailyAvailable && (
+            <OverlayCard>
+              <div className="motion-rise mx-auto flex w-full max-w-2xl flex-col items-center justify-center text-center">
+                <div className="surface-panel rounded-[28px] px-6 py-8 sm:px-8 sm:py-10">
+                  <p className="label-kicker">Daily challenge</p>
+                  <h2 className="display-title brush-stroke mt-4 text-4xl sm:text-5xl">
+                    Unavailable Today
+                  </h2>
+                  <p className="body-copy mx-auto mt-4 max-w-md text-sm sm:text-base">
+                    {bootstrap.unavailableReason ?? 'The daily challenge is temporarily unavailable.'}
+                  </p>
+                  <div className="mt-6 flex flex-wrap justify-center gap-3">
+                    <button
+                      onClick={() => setPageView('community')}
+                      className="action-button action-secondary"
+                    >
+                      Community Layouts
+                    </button>
+                    {activeEvent && (
+                      <button
+                        onClick={() => setPageView('event')}
+                        className="action-button action-secondary"
+                      >
+                        Event: {activeEvent.label}
+                      </button>
+                    )}
+                    <button
+                      onClick={() => void fetchLeaderboard()}
+                      className="action-button action-subtle"
+                    >
+                      Leaderboard
+                    </button>
+                    <button
+                      onClick={() => setPageView('settings')}
+                      className="action-button action-subtle"
+                    >
+                      Settings
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </OverlayCard>
+          )}
+
+          {isHomeView && gameState === 'ready' && bootstrap?.dailyAvailable && (
             <OverlayCard>
               <div className="motion-rise mx-auto flex w-full max-w-2xl flex-col items-center justify-center text-center">
                 <div className="surface-panel rounded-[28px] px-6 py-8 sm:px-8 sm:py-10">
